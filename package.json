@@ -1,0 +1,10 @@
+{
+  "name": "amaze-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "discord.js": "^14.26.3",
+    "dotenv": "^17.4.2",
+    "sqlite3": "^6.0.1"
+  }
+}
