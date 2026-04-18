@@ -1,3 +1,22 @@
+# Dependency directories
+node_modules/
+
+# Local Database (CRITICAL: Don't upload your user's data!)
+*.sqlite
+*.sqlite-journal
+
+# Environment Secrets (CRITICAL: Don't upload your Bot Token!)
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
 # Logs
 logs
 *.log
