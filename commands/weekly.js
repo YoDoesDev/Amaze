@@ -3,7 +3,7 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'weekly', 
-  category: 'Economy', 
+  category: 'Economy'
   description: 'Use this command to gain amash every week.', 
   async execute(message){
     const embed = new EmbedBuilder()
@@ -23,7 +23,7 @@ module.exports = {
       if(row && (now - row.wTimestamp < cooldown)){
         const days = Math.floor((cooldown - (now - row.wTimestamp))/86400000);
         const hrs = Math.floor((cooldown - (now - row.wTimestamp))/3600000);
-        return message.reply("Be patient! You can claim your weekly in " + days > 1? (days + "days."):(hrs + " hours."));
+        return message.reply("Be patient! You can claim your daily in " + days > 1? (days + "days."):(hrs + " hours."));
       }  
 
       db.run(`INSERT INTO amash (userid, bucks, wTimestamp) 
