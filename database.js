@@ -22,7 +22,7 @@ const initDb = () => {
 
         // Table 4: Amash Holders
         db.run(`CREATE TABLE IF NOT EXISTS amash
-            userid TEXT PRIMARY KEY 
+            userid TEXT PRIMARY KEY, 
             bucks INTEGER DEFAULT 0`);
     });
 }
