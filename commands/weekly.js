@@ -3,7 +3,7 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'weekly', 
-  category: 'Economy'
+  category: 'Economy', 
   description: 'Use this command to gain amash every week.', 
   async execute(message){
     const embed = new EmbedBuilder()
