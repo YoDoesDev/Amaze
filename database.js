@@ -30,12 +30,12 @@ const initDb = () => {
 
         // Table 5: Stonks
         db.run(`CREATE TABLE IF NOT EXISTS investments (
-             srno INTEGER PRIMARY KEY, 
              investor TEXT, 
              invested TEXT, 
              stocks INTEGER DEFAULT 0,
-             baseprice INTEGER DEFAULT 70
-             profit INTEGER DEFAULT 0
+             baseprice INTEGER DEFAULT 70,
+             profit INTEGER DEFAULT 0,
+             PRIMARY KEY (investor, investes) 
          ) `);
     });
 }
