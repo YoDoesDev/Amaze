@@ -8,7 +8,7 @@ module.exports = {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
         const now = Date.now();
-        const cooldownTime = 12 * 60 * 60 * 1000; // Recommended 12h for economy balance
+        const cooldownTime = 8 * 60 * 60 * 1000; // Recommended 12h for economy balance
 
         if (!targetUser) return message.reply("Mention someone to vouch for them!");
         if (targetUser.id === authorId) return message.reply("Self-vouching? Focus on the work, not the praise.");
