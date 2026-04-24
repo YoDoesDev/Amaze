@@ -1,17 +1,16 @@
 const { db } = require('../database.js');
 
 module.exports = {
-    name: 'vouch',
+    name: 'defame',
     category: 'Reputation', 
-    description: 'Vouch for a user with a 2-hour cooldown per person.',
+    description: 'Defame a user with a 8-hour cooldown per person.',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
         const now = Date.now();
-        const cooldownTime = 8 * 60 * 60 * 1000; // Recommended 12h for economy balance
-
-        if (!targetUser) return message.reply("Mention someone to vouch for them!");
-        if (targetUser.id === authorId) return message.reply("Self-vouching? Focus on the work, not the praise.");
+        const cooldownTime = 8 * 60 * 60 * 1000;
+        if (!targetUser) return message.reply("Mention someone to defame them.");
+        if (targetUser.id === authorId) return message.reply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
         db.get(
@@ -27,28 +26,24 @@ module.exports = {
                     const timeLeft = Math.ceil((cooldownTime - (now - row.timestamp)) / (60 * 1000));
                     const hours = Math.floor(timeLeft / 60);
                     const minutes = timeLeft % 60;
-                    return message.reply(`Wait **${hours}h ${minutes}m** to vouch for them again.`);
+                    return message.reply(`Wait **${hours}h ${minutes}m** to defame them.`);
                 }
 
                 db.serialize(() => {
-                    // 1. Log the history
                     db.run(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`, [authorId, targetUser.id, now]);
-
-                    // 2. Corrected number of values (2 columns: user_id, points)
+                    
                     db.run(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`, [targetUser.id]);
 
-                    // 3. Update Reputation
-                    db.run(`UPDATE reputation SET points = points + 1 WHERE user_id = ?`, [targetUser.id]);
+                    db.run(`UPDATE reputation SET points = points - 1 WHERE user_id = ?`, [targetUser.id]);
 
                     // 4. Update Investor Profits
-                    db.run(`UPDATE investments SET profit = profit + (stocks * 5) WHERE invested = ?`, [targetUser.id], (err) => {
+                    db.run(`UPDATE investments SET profit = profit - (stocks * 5) WHERE invested = ?`, [targetUser.id], (err) => {
                         if (err) console.error("Investment Update Error:", err);
                     });
 
-                    // 5. Fetch and send result
                     db.get(`SELECT points FROM reputation WHERE user_id = ?`, [targetUser.id], (fetchErr, repRow) => {
                         if (repRow) {
-                            message.channel.send(`✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow.points}** reputation points.`);
+                            message.channel.send(`🥀 **Defamation Recorded!** ${targetUser.username} now has **${repRow.points}** reputation points.`);
                         }
                     });
                 });
