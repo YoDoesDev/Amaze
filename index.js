@@ -30,13 +30,6 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     } catch (error) { console.error(error); }
 })();
 
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName === 'ping') {
-        const command = client.commands.get('ping');
-        try { await command.execute(interaction); } catch (e) { console.error(e); }
-    }
-});
 
 const cooldowns = new Map();
 
