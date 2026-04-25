@@ -1,27 +1,18 @@
-const { db } = require('../database.js');
-
 module.exports = {
     name: 'ping',
-    description: 'Check bot status and latency',
-    async execute(interaction, message) {
-        const latency = Date.now() - interaction.createdTimestamp;
-        
-        const apiPing = Math.round(interaction.client.ws.ping);
+    description: 'Check the bot latency',
+    async execute(context) { 
+        const isSlash = context.isChatInputCommand && context.isChatInputCommand();
+    
+        const latency = Date.now() - context.createdTimestamp;
+        const heartbeat = context.client.ws.ping;
 
-        const userId = interaction.user.id;
+        const response = `🏓 **Pong!**\n**Latency:** ${latency}ms\n**API Heartbeat:** ${heartbeat}ms`;
 
-        db.run(`INSERT OR IGNORE INTO pings (user_id, count) VALUES (?, 0)`, [userId], (err) => {
-            if (err) return console.error(err);
-
-            db.run(`UPDATE pings SET count = count + 1 WHERE user_id = ?`, [userId], (err) => {
-                if (err) return console.error(err);
-
-                interaction.reply({
-                    content: `🏓 **Pong!**\n` +
-                             `**Latency:** \`${latency}ms\`\n` +
-                             `**API Heartbeat:** \`${apiPing}ms\``
-                });
-            });
-        });
-    }
+        if (isSlash) {
+            await context.reply({ content: response });
+        } else {
+            await context.reply(response);
+        }
+    },
 };
