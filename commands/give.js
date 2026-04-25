@@ -15,6 +15,9 @@ module.exports = {
     if (isNaN(amt) || (amt < 1 || !Number.isInteger(Number(amt)))) {
       return message.reply("Please enter a valid amount of amash!");
     }
+    if(target.id == message.author.id){
+      return message.reply("😭 You could use `!daily`, `!weekly`, or `!monthly` but no!");
+    }
     
     db.get(`SELECT bucks FROM amash WHERE userid = ?`, [message.author.id], (err, row) => {
       if (err) {
