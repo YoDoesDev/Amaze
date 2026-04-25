@@ -41,6 +41,19 @@ client.on('interactionCreate', async interaction => {
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
+
+
+    const triggers = ['thx', 'thanks', 'thank you', 'tysm'];
+    
+    const containsTrigger = triggers.some(word => message.content.toLowerCase().includes(word));
+
+    if (containsTrigger) {
+
+        if (Math.random() < 0.3) { 
+            message.channel.send(`Glad you're happy! Remember, you can use \`!vouch @user\` to increase their reputation!`);
+        }
+    }
+    
 const prefix = '!';
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
