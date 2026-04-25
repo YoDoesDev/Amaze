@@ -3,7 +3,7 @@ const { db } = require('../database.js');
 module.exports = {
     name: 'ping',
     description: 'Check bot status and latency',
-    async execute(interaction) {
+    async execute(interaction, message) {
         const latency = Date.now() - interaction.createdTimestamp;
         
         const apiPing = Math.round(interaction.client.ws.ping);
