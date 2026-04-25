@@ -3,7 +3,9 @@ const { db } = require('../database.js');
 
 module.exports = {
     name: 'repstats',
-    description: 'Check reputation points!',
+    aliases: ['rs'], 
+    category: 'Reputation', 
+    description: 'Check your/other\'s  reputation points\n\nSyntax: `!repstats [@user]`\n\n<> = REQUIRED\n [] = OPTIONAL\n Alias: !rs',
     async execute(message, args) {
         console.log(">>> [DEBUG] repstats command started");
 

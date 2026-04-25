@@ -3,8 +3,9 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'monthly', 
+  aliases: ['m'], 
   category: 'Economy', 
-  description: 'Use this command to gain amash every month.', 
+  description: 'Use this command to gain amash every month.\n\nAlias: !m', 
   async execute(message){
     const embed = new EmbedBuilder()
       .setTitle("Amash collected!")
@@ -23,7 +24,8 @@ module.exports = {
       if(row && (now - row.mTimestamp < cooldown)){
         const days = Math.floor((cooldown - (now - row.mTimestamp))/86400000);
         const hrs = Math.floor((cooldown - (now - row.mTimestamp))/3600000);
-        return message.reply("Be patient! You can claim your monthly in " + days > 1? (days + "days."):(hrs + " hours."));
+          const end = days > 1? (days + " days."):(hrs + " hours.");
+        return message.reply("Be patient! You can claim your monthly in " + end);
       }  
 
       db.run(`INSERT INTO amash (userid, bucks, mTimestamp) 

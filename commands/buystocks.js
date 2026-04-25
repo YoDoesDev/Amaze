@@ -3,7 +3,10 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'buystocks', 
-  description: 'Buy the stocks of a person to get profit from their reputation.', 
+  aliases: ['bs'], 
+  category: 'Economy', 
+  description: 'Buy the stocks of a person to get profit from their reputation. \n\nSyntax: `!buystocks <@user> <no_of_stocks> \nAlias: !bs`', 
+
   async execute (message, args){
     const targetUser = message.mentions.users.first();
     const amt = isNaN(args[1]) ? 1 : parseInt(args[1]);

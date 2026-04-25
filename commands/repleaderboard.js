@@ -3,8 +3,9 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'repleaderboard', 
+  category: 'Reputation', 
   aliases: ['replb', 'rl'], 
-  description: 'Shows a leaderboard of members with highest reputation points. ',
+  description: 'Shows a leaderboard of members with highest reputation points. \n\nAliases: !replb, !rl',
   async execute(message){
     db.all(`SELECT *
     FROM reputation
@@ -15,11 +16,15 @@ module.exports = {
           return;
         }
         
-        const leaderboard = rows.map((row, index) => {
+        const gleaderboard = rows.map((row, index) => {
         return `${index + 1}. <@!${row.user_id}> — ${row.points} points`;
     }).join('\n');
+
+
+
+          
     
-    const embed = new EmbedBuilder().setColor(0x5865F2).setTitle(`Reputation Leaderboard`).setDescription(leaderboard).setFooter({text: `Requested By: ${message.author.tag}`});
+    const embed = new EmbedBuilder().setColor(0x5865F2).setTitle(`Reputation Leaderboard`).setDescription(gleaderboard).setFooter({text: `Requested By: ${message.author.tag}`});
     
     message.channel.send({embeds: [embed]})
       } catch (error) {

@@ -3,8 +3,9 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'portfolio', 
+  aliases: ['port', 'pf'], 
   category: 'Economy', 
-  description: 'Shows a list of stocks you have bought', 
+  description: 'Shows a list of stocks you/others have bought\n\nSyntax: `!portfolio [@user]`\n<> = REQUIRED [] = OPTIONAL\n\n Aliases: !port, !pf', 
   async execute(message){
     const target = message.mentions.users.first() || message.author;
     db.all(`SELECT invested, stocks, profit FROM investments WHERE investor = ?`, [target.id], (err, rows) => {

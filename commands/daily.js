@@ -3,7 +3,9 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'daily', 
-  description: 'Use this command to gain amash everyday.', 
+  aliases: ['d'], 
+  category: 'Economy', 
+  description: 'Use this command to gain amash everyday. \n\nAlias: !', 
   async execute(message){
     const embed = new EmbedBuilder()
       .setTitle("Amash collected!")

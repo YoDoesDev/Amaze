@@ -3,7 +3,7 @@ const { db } = require('../database.js');
 module.exports = {
     name: 'defame',
     category: 'Reputation', 
-    description: 'Defame a user with a 8-hour cooldown per person.',
+    description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>`\n\n<> = REQUIRED\n[] = OPTIONAL',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
@@ -26,7 +26,7 @@ module.exports = {
                     const timeLeft = Math.ceil((cooldownTime - (now - row.timestamp)) / (60 * 1000));
                     const hours = Math.floor(timeLeft / 60);
                     const minutes = timeLeft % 60;
-                    return message.reply(`Wait **${hours}h ${minutes}m** to defame them.`);
+                    return message.reply(`This user's reputation was recently influenced. Wait **${hours}h ${minutes}m** to fame or defame them again.`);
                 }
 
                 db.serialize(() => {
