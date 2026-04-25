@@ -30,17 +30,23 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
     } catch (error) { console.error(error); }
 })();
 
-client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
-    if (interaction.commandName === 'ping') {
-        const command = client.commands.get('ping');
-        try { await command.execute(interaction); } catch (e) { console.error(e); }
-    }
-});
 
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
+
+
+    const triggers = ['thx', 'thanks', 'thank you', 'tysm'];
+    
+    const containsTrigger = triggers.some(word => message.content.toLowerCase().includes(word));
+
+    if (containsTrigger) {
+
+        if (Math.random() < 0.3) { 
+            message.channel.send(`Glad you're happy! Remember, you can use \`!vouch @user\` to increase their reputation!`);
+        }
+    }
+    
 const prefix = '!';
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
