@@ -10,6 +10,10 @@ const client = new Client({
     ] 
 });
 
+client.once("clientReady", () => {
+    console.log("Bot is ready. GLHF, devs.");
+});
+
 client.commands = new Collection();
 initDb();
 
