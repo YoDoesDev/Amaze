@@ -4,6 +4,7 @@ const db = new sqlite3.Database('./amaze.sqlite', (err) => {
     console.log('Connected to the amaze.sqlite database.');
 });
 
+
 const initDb = () => {
     db.serialize(() => {
         // Table 1: Pings
@@ -23,9 +24,9 @@ const initDb = () => {
         // Table 4: Amash Holders
         db.run(`CREATE TABLE IF NOT EXISTS amash (
             userid TEXT PRIMARY KEY, 
-            bucks INTEGER DEFAULT 0
-            dTimestamp INTEGER DEFAULT 0
-            wTimestamp INTEGER DEFAULT 0
+            bucks INTEGER DEFAULT 0,
+            dTimestamp INTEGER DEFAULT 0,
+            wTimestamp INTEGER DEFAULT 0,
             mTimestamp INTEGER DEFAULT 0)`);
 
         // Table 5: Stonks
@@ -35,9 +36,9 @@ const initDb = () => {
              stocks INTEGER DEFAULT 0,
              baseprice INTEGER DEFAULT 70,
              profit INTEGER DEFAULT 0,
-             PRIMARY KEY (investor, investes) 
-         ) `);
+             PRIMARY KEY (investor, invested) 
+        )`);
     });
-}
+};
 
 module.exports = { db, initDb };

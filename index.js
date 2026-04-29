@@ -20,22 +20,13 @@ for (const file of commandFiles) {
     console.log("Successfully registered " + file + "\n"); 
 }
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-(async () => {
-    try {
-        await rest.put(
-            Routes.applicationCommands(process.env.CLIENT_ID),
-            { body: [{ name: 'ping', description: 'Replies with Pong and updates count' }] },
-        );
-        console.log('Successfully registered /ping');
-    } catch (error) { console.error(error); }
-})();
 
 
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
 
-
+    console.log("MESSAGE RECEIVED:", message.content);
     const triggers = ['thx', 'thanks', 'thank you', 'tysm'];
     
     const containsTrigger = triggers.some(word => message.content.toLowerCase().includes(word));
