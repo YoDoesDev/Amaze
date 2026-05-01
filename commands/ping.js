@@ -11,7 +11,7 @@ module.exports = {
         
         const heartbeat = message.client.ws.ping;
 
-        message.reply(
+        pingmsg.edit(
             `🏓 **Pong!**\n**Latency:** ${latency}ms\n**API Heartbeat:** ${heartbeat}ms`
         );
     },
