@@ -22,4 +22,22 @@ jobs:
           pass: ${{ secrets.SFTP_PASS }}
           localDir: "./"
           remoteDir: ${{ secrets.SFTP_PATH }}
-          options: "--verbose --delete --exclude-glob .env --exclude-glob node_modules --exclude-glob .git --exclude-glob .github --exclude-glob *.sqlite"
+          options: "--verbose --delete \
+                    --exclude-glob .env \
+                    --exclude node_modules \
+                    --exclude .git \
+                    --exclude .github \
+                    --exclude *.sqlite"
+
+      - name: restart-bot
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          script: |
+            cd ${{ secrets.SFTP_PATH }}
+            pkill node || true
+            npm install
+            node index.js > output.log 2>&1 &
