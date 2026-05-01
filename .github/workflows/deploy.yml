@@ -22,4 +22,4 @@ jobs:
           pass: ${{ secrets.SFTP_PASS }}
           localDir: "./"
           remoteDir: ${{ secrets.SFTP_PATH }}
-          options: "--verbose"
+          options: "--verbose --delete --exclude-glob .env --exclude-glob node_modules"
