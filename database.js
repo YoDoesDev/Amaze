@@ -4,6 +4,7 @@ const db = new sqlite3.Database('./amaze.sqlite', (err) => {
     console.log('Connected to the amaze.sqlite database.');
 });
 
+
 const initDb = () => {
     db.serialize(() => {
         // Table 1: Pings
@@ -36,8 +37,8 @@ const initDb = () => {
              baseprice INTEGER DEFAULT 70,
              profit INTEGER DEFAULT 0,
              PRIMARY KEY (investor, invested) 
-         ) `);
+        )`);
     });
-}
+};
 
 module.exports = { db, initDb };

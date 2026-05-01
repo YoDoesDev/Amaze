@@ -1,11 +1,18 @@
 module.exports = {
     name: 'ping',
     description: 'Check the bot latency',
-    execute(message) {
-        const latency = Date.now() - message.createdTimestamp;
+    async execute(message) {
+        // here you can see my unparalleled genius
+        /* because date.now will be inaccurate when compared to discord
+        time I USE DISCORD TIME WITH DISCORD TIME
+        the world isnt ready for me yet */
+        const pingmsg = await message.reply("Pinging...");
+        const latency = pingmsg.createdTimestamp - message.createdTimestamp;
         
         const heartbeat = message.client.ws.ping;
 
-        message.reply(`🏓 **Pong!**\n**Latency:** ${latency}ms\n**API Heartbeat:** ${heartbeat}ms`);
+        message.reply(
+            `🏓 **Pong!**\n**Latency:** ${latency}ms\n**API Heartbeat:** ${heartbeat}ms`
+        );
     },
 };
