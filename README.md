@@ -34,4 +34,4 @@ Invest in the social growth of others. This system ties the economy directly to 
 * **Database**: Secure SQL backend with protection against common vulnerabilities.
 * **Scope**: Currently features 14 integrated commands with global tracking.
 
-**NOTE:** The bot is currently prefix only, slash commands will be added soon. 
+**NOTE:** The bot is currently prefix only, slash commands will be added soon. (WIP)
