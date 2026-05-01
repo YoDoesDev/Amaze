@@ -31,14 +31,20 @@ const cooldowns = new Map();
 client.on('messageCreate', async (message) => {
 
     console.log("MESSAGE RECEIVED:", message.content);
-    const triggers = ['thx', 'thanks', 'thank you', 'tysm'];
+    const triggerHappy = ['thx', 'thanks', 'thank you', 'tysm'];
+    const triggerAngry = ['fk u', 'fuck you', 'fuck u', 'i hate u']
     
-    const containsTrigger = triggers.some(word => message.content.toLowerCase().includes(word));
+    const containsTriggerHappy = triggerHappy.some(word => message.content.toLowerCase().includes(word));
+    const containsTriggerAngry = triggerAngry.some(word => message.content.toLowerCase().includes(word));
 
-    if (containsTrigger) {
-
+    if (containsTriggerHappy) {
         if (Math.random() < 0.3) { 
             message.channel.send(`Glad you're happy! Remember, you can use \`!vouch @user\` to increase their reputation!`);
+        }
+    }
+    if (containsTriggerAngry) {
+        if (Math.random() < 0.6) { 
+            message.channel.send(`Angry at someone? Use \`!defame @user\` to decrease their reputation!`);
         }
     }
     
