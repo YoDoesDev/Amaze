@@ -1,0 +1,25 @@
+name: deploy-sftp-heavencloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout-repo
+        uses: actions/checkout@v6
+
+      - name: deploy-sftp
+        uses: pressidium/lftp-mirror-action@v1
+        with:
+          host: ${{ secrets.SFTP_HOST }}
+          port: ${{ secrets.SFTP_PORT }}
+          user: ${{ secrets.SFTP_USER }}
+          pass: ${{ secrets.SFTP_PASS }}
+          localDir: "./"
+          remoteDir: ${{ secrets.SFTP_PATH }}
+          options: "--verbose"
