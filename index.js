@@ -98,6 +98,7 @@ app.post('/votereward', (req, res) => {
 
     if (!userId) return res.status(400).send("No User ID provided");
 
+    res.status(200).send("Processing");
     console.log(`Voter detected! ID: ${userId}`);
 
     // This handles both new users (Insert) and existing users (Update)
