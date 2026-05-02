@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../database.js');
-
+ 
 module.exports = {
   name: 'buystocks', 
   aliases: ['bs'], 

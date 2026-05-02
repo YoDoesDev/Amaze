@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: checkout-repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4 # Use v4 for better stability
 
       - name: deploy-sftp
         uses: pressidium/lftp-mirror-action@v1
@@ -20,6 +20,7 @@ jobs:
           port: ${{ secrets.SFTP_PORT }}
           user: ${{ secrets.SFTP_USER }}
           pass: ${{ secrets.SFTP_PASS }}
-          localDir: "./"
-          remoteDir: ${{ secrets.SFTP_PASS }}
-          options: "--verbose --delete --exclude-glob .env --exclude-glob node_modules --exclude-glob .git --exclude-glob .github --exclude-glob *.sqlite"
+          localDir: "."
+          remoteDir: "."
+          # The key is using "." for both to stay in the current directory
+          options: "--verbose --reverse --delete --ignore-time --exclude-glob .env --exclude-glob node_modules --exclude-glob .git --exclude-glob .github --exclude-glob *.sqlite"
