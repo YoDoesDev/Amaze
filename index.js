@@ -102,9 +102,9 @@ app.post('/votereward', (req, res) => {
 
     // This handles both new users (Insert) and existing users (Update)
     const sql = `
-        INSERT INTO amash (user_id, bucks) 
+        INSERT INTO amash (userid, bucks) 
         VALUES(?, 150) 
-        ON CONFLICT(user_id) 
+        ON CONFLICT(userid) 
         DO UPDATE SET bucks = amash.bucks + 150`;
 
     db.run(sql, [userId], async (err) => {
