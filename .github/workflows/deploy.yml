@@ -13,13 +13,14 @@ jobs:
       - name: checkout-repo
         uses: actions/checkout@v6
 
-      - name: deploy-sftp
+            - name: deploy-sftp
         uses: pressidium/lftp-mirror-action@v1
         with:
           host: ${{ secrets.SFTP_HOST }}
           port: ${{ secrets.SFTP_PORT }}
           user: ${{ secrets.SFTP_USER }}
           pass: ${{ secrets.SFTP_PASS }}
-          localDir: "./"
-          remoteDir: ${{ secrets.SFTP_PATH }}
-          options: "--verbose --delete --exclude-glob .env --exclude-glob node_modules --exclude-glob .git --exclude-glob .github --exclude-glob *.sqlite"
+          # Use absolute paths with trailing slashes to force "content-only" transfer
+          localDir: "./" 
+          remoteDir: "/"
+          options: "--verbose --reverse --delete --exclude-glob .env --exclude-glob node_modules --exclude-glob .git --exclude-glob .github --exclude-glob *.sqlite"
