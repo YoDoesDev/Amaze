@@ -1,4 +1,5 @@
 // Automated Deploy Active: May 1, 2026.
+
 const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
 const { initDb, db } = require('./database.js');
 const express = require('express');
