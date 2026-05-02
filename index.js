@@ -1,6 +1,9 @@
 // Automated Deploy Active: May 1, 2026.
 const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
 const { initDb, db } = require('./database.js');
+const express = require('express');
+const app = express();
+app.use(express.json());
 const fs = require('fs');
 require('dotenv').config();
 const client = new Client({ 
@@ -87,5 +90,42 @@ const prefix = '!';
         message.reply("There was an error trying to execute that command!");
     }
 });
+
+app.post('/votereward', (req, res) => {
+    const { userId } = req.body;
+
+    if (!userId) return res.status(400).send("No User ID provided");
+
+    console.log(`Voter detected! ID: ${userId}`);
+
+    // This handles both new users (Insert) and existing users (Update)
+    const sql = `
+        INSERT INTO amash (user_id, bucks) 
+        VALUES(?, 150) 
+        ON CONFLICT(user_id) 
+        DO UPDATE SET bucks = amash.bucks + 150`;
+
+    db.run(sql, [userId], async (err) => {
+        if (err) {
+            console.error("Database error:", err.message);
+            return res.status(500).send("DB Error");
+        }
+        console.log(`Successfully added 150 bucks to ${userId}`);
+        
+        // Safer way to send DMs
+        try {
+            const user = await client.users.fetch(userId);
+            await user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀");
+        } catch (error) {
+            console.log(`Could not DM user ${userId}: DMs are likely closed.`);
+        }
+        
+        res.status(200).send("Reward Processed");
+    });
+});
+
+// Make sure the bot listens on the port you put in Pipedream
+app.listen(2186, () => console.log("Webhook listener is live on port 2186"));
+
 
 client.login(process.env.TOKEN);
