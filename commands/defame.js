@@ -14,21 +14,31 @@ module.exports = {
         if (targetUser.id === authorId) return message.reply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
-        // 1. Check Cooldown and Inventory for Doubler
+        // 1. Check Cooldown/Doubler (from Author) AND Shield (from Target)
         db.get(
-            `SELECT v.timestamp, i.ddbl_tp 
+            `SELECT 
+                v.timestamp, 
+                i_author.ddbl_tp, 
+                i_target.pr_tp AS target_shield
              FROM amash a 
              LEFT JOIN vouch_history v ON v.voucher_id = ? AND v.receiver_id = ?
-             LEFT JOIN inventory i ON i.userid = ?
+             LEFT JOIN inventory i_author ON i_author.userid = ?
+             LEFT JOIN inventory i_target ON i_target.userid = ?
              WHERE a.userid = ?`,
-            [authorId, targetUser.id, authorId, authorId],
+            [authorId, targetUser.id, authorId, targetUser.id, authorId],
             (err, row) => {
                 if (err) {
                     console.error("Database Error:", err);
                     return message.reply("A logic error occurred.");
                 }
 
-                // Check Cooldown
+                // A. Check for PR Shield on the Target
+                const isShielded = row && row.target_shield && now < row.target_shield;
+                if (isShielded) {
+                    return message.reply(`🛡️ **Defamation Blocked!** ${targetUser.username} is currently protected by a **PR Shield**.`);
+                }
+
+                // B. Check Cooldown
                 if (row && row.timestamp && (now - row.timestamp) < cooldownTime) {
                     const timeLeft = Math.ceil((cooldownTime - (now - row.timestamp)) / (60 * 1000));
                     const hours = Math.floor(timeLeft / 60);
@@ -36,7 +46,7 @@ module.exports = {
                     return message.reply(`Wait **${hours}h ${minutes}m** to fame or defame them again.`);
                 }
 
-                // 2. Determine Multiplier (ddbl_tp stores the expiry timestamp)
+                // C. Determine Multiplier (ddbl_tp stores the expiry timestamp)
                 const isDoubled = row && row.ddbl_tp && now < row.ddbl_tp;
                 const multiplier = isDoubled ? 2 : 1;
 
