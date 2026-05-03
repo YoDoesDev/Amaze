@@ -14,7 +14,7 @@ module.exports = {
         return message.reply("A Database Error Occured!");
       }
       if(rows.length == 0){
-        return message.reply("You have not bought any stocks yet!");
+        return message.reply("The user hasn't bought any stocks yet!");
       }
       
       const list = rows.map((row, index) => {

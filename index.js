@@ -98,33 +98,29 @@ app.post('/votereward', (req, res) => {
 
     if (!userId) return res.status(400).send("No User ID provided");
 
+    // 1. Respond IMMEDIATELY to Pipedream
+    res.status(200).send("OK");
     console.log(`Voter detected! ID: ${userId}`);
 
-    // This handles both new users (Insert) and existing users (Update)
+    // 2. Run the DB and DM logic in the background
     const sql = `
         INSERT INTO amash (userid, bucks) 
         VALUES(?, 150) 
         ON CONFLICT(userid) 
         DO UPDATE SET bucks = amash.bucks + 150`;
 
-    db.run(sql, [userId], async (err) => {
-        if (err) {
-            console.error("Database error:", err.message);
-            return res.status(500).send("DB Error");
-        }
-        console.log(`Successfully added 150 bucks to ${userId}`);
+    db.run(sql, [userId], function(err) { // Used 'function' for 'this.changes'
+        if (err) return console.error("Database error:", err.message);
         
-        // Safer way to send DMs
-        try {
-            const user = await client.users.fetch(userId);
-            await user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀");
-        } catch (error) {
-            console.log(`Could not DM user ${userId}: DMs are likely closed.`);
-        }
+        console.log(`Successfully added 150 bucks to ${userId}. Rows: ${this.changes}`);
         
-        res.status(200).send("Reward Processed");
+        // Background DM attempt
+        client.users.fetch(userId)
+            .then(user => user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀"))
+            .catch(() => console.log(`Could not DM user ${userId}.`));
     });
 });
+
 
 // Make sure the bot listens on the port you put in Pipedream
 app.listen(2186, () => console.log("Webhook listener is live on port 2186"));
