@@ -32,7 +32,8 @@ const initDb = () => {
             dTimestamp INTEGER DEFAULT 0,
             wTimestamp INTEGER DEFAULT 0,
             mTimestamp INTEGER DEFAULT 0)`);
-
+        db.run(`ALTER TABLE amash ADD COLUMN pstone INTEGER DEFAULT 0;
+`);
         // Table 5: Stonks
         db.run(`CREATE TABLE IF NOT EXISTS investments (
              investor TEXT, 
