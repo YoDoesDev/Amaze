@@ -42,6 +42,17 @@ const initDb = () => {
              profit INTEGER DEFAULT 0,
              PRIMARY KEY (investor, invested) 
         )`);
+
+        // Table 6: Inventory
+        db.run(`CREATE TABLE IF NOT EXISTS inventory (
+    userid TEXT PRIMARY KEY,
+    pr_tp INTEGER DEFAULT 0,
+    ddbl_tp INTEGER DEFAULT 0,
+    dblv_tp INTEGER DEFAULT 0,
+    stocklic INTEGER DEFAULT 0,
+    pstone INTEGER DEFAULT 0
+)`);
+
     });
 };
 
