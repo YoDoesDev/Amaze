@@ -17,7 +17,7 @@ const client = new Client({
     ] 
 });
 
-client.once("ready", () => { // Fixed event name from "clientReady" to "ready"
+client.once("clientReady", () => { // Fixed event name from "clientReady" to "ready"
     console.log("Bot is ready. GLHF, devs.");
 });
 
