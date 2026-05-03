@@ -109,7 +109,8 @@ app.post('/votereward', (req, res) => {
         ON CONFLICT(userid) 
         DO UPDATE SET bucks = amash.bucks + 150`;
 
-    db.run(sql, [userId], function(err) { // Used 'function' for 'this.changes'
+    db.parallelize(() => {
+        db.run(sql, [userId], function(err) { // Used 'function' for 'this.changes'
         if (err) return console.error("Database error:", err.message);
         
         console.log(`Successfully added 150 bucks to ${userId}. Rows: ${this.changes}`);
@@ -119,6 +120,7 @@ app.post('/votereward', (req, res) => {
             .then(user => user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀"))
             .catch(() => console.log(`Could not DM user ${userId}.`));
     });
+    }) 
     });
 });
 
