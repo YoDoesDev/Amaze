@@ -2,6 +2,8 @@ const { db } = require('../database.js');
 
 module.exports = {
     name: 'defame',
+    category: 'Reputation', 
+    description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!vouch <@user>`',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
