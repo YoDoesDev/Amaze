@@ -119,7 +119,7 @@ app.post('/votereward', (req, res) => {
             .then(user => user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀"))
             .catch(() => console.log(`Could not DM user ${userId}.`));
     });
-    }
+    });
 });
 
 
