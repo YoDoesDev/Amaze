@@ -7,6 +7,10 @@ const db = new sqlite3.Database('./amaze.sqlite', (err) => {
 
 const initDb = () => {
     db.serialize(() => {
+
+        db.run("PRAGMA journal_mode = WAL;"); 
+        db.run("PRAGMA synchronous = OFF;"); 
+        db.run("PRAGMA temp_store = MEMORY;");
         // Table 1: Pings
         db.run(`CREATE TABLE IF NOT EXISTS pings (user_id TEXT PRIMARY KEY, count INTEGER DEFAULT 0)`);
         
