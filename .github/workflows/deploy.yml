@@ -35,4 +35,4 @@ jobs:
           localDir: "deploy"
           remoteDir: "."
           # The key is using "." for both to stay in the current directory
-          options: "--verbose -only-newer"
+          options: "--verbose --only-newer"
