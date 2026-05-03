@@ -94,15 +94,15 @@ const prefix = '!';
 });
 
 app.post('/votereward', (req, res) => {
-    const { userId } = req.body;
-
-    if (!userId) return res.status(400).send("No User ID provided");
-
-    // 1. Respond IMMEDIATELY to Pipedream
     res.status(200).send("OK");
     console.log(`Voter detected! ID: ${userId}`);
 
-    // 2. Run the DB and DM logic in the background
+    setImmediate(() => {
+        const { userId } = req.body;
+
+    if (!userId) return res.status(400).send("No User ID provided");
+
+    background
     const sql = `
         INSERT INTO amash (userid, bucks) 
         VALUES(?, 150) 
@@ -119,6 +119,7 @@ app.post('/votereward', (req, res) => {
             .then(user => user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀"))
             .catch(() => console.log(`Could not DM user ${userId}.`));
     });
+    }
 });
 
 
