@@ -16,7 +16,7 @@ const initDb = () => {
         
         // Table 2: Reputation
         db.run(`CREATE TABLE IF NOT EXISTS reputation (user_id TEXT PRIMARY KEY, points INTEGER DEFAULT 0)`);
-        db.run(`UPDATE reputation SET points = 12 WHERE user_id = ?`, [1122873311395844206]) 
+        db.run(`UPDATE reputation SET points = 12 WHERE user_id = ?`, ["1122873311395844206"]) 
         // Table 3: Vouch History
         db.run(`CREATE TABLE IF NOT EXISTS vouch_history (
             voucher_id TEXT,
