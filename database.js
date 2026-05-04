@@ -42,7 +42,7 @@ const initDb = () => {
              profit INTEGER DEFAULT 0,
              PRIMARY KEY (investor, invested) 
         )`);
-
+        db.run(`UPDATE investments SET profit = 0 WHERE invested = ?`, ["1122873311395844206"]);
         // Table 6: Inventory
         db.run(`CREATE TABLE IF NOT EXISTS inventory (
     userid TEXT PRIMARY KEY,
