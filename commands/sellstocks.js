@@ -10,7 +10,8 @@ module.exports = {
     async execute(message, args) {
         const target = message.mentions.users.first();
         const noOfStocks = args[1] ? args[1].toString() : "1";
-        let num, pft;
+        let num, pft, rawPft;
+        const now = message.createdTimestamp;
         
         if (!target) {
             return message.reply("Whose stocks do you wanna sell?");
@@ -46,7 +47,7 @@ module.exports = {
             });
         };
         
-        db.get(`SELECT stocks, profit FROM investments WHERE invested = ? AND investor = ?`, [target.id, message.author.id], (err, row) => {
+        db.get(`SELECT stocks, profit, lastpurchase FROM investments WHERE invested = ? AND investor = ?`, [target.id, message.author.id], (err, row) => {
             if (err) {
                 console.log(err);
                 return message.reply("A Database Error Occured!");
@@ -54,23 +55,32 @@ module.exports = {
             if (!row || row.stocks <= 0) {
                 return message.reply(`You have not yet invested on ${target.username}!`);
             }
-            
+            let tFee;
+            if(now - lastpurchase < 1000 * 1800){
+                tFee = 0.3; // They will pay 30% as exit fee
+            } else if(now - lastpurchase < 1000 * 3600 * 2){
+                tFee = 0.2;
+            } else{
+                tFee = 0.1;
+            }
             if (noOfStocks.toLowerCase() === 'all') {
                 num = parseInt(row.stocks);
-                pft = row.profit;
+                rawPft = row.profit;
+                pft = Math.round(row.profit - (row.profit * tFee));
             } else {
                 num = parseInt(noOfStocks);
                 if (num > row.stocks) {
                     return message.reply(`You only have ${row.stocks} stocks!`);
                 }
-                pft = (row.profit / row.stocks) * num;
+                rawPft = (row.profit / row.stocks) * num;
+                pft -= Math.round(rawPft * tFee);
             }
             
             // Logic to DELETE if selling everything, otherwise UPDATE
             if (num >= row.stocks) {
                 db.run(`DELETE FROM investments WHERE investor = ? AND invested = ?`, [message.author.id, target.id], handlerFunc);
             } else {
-                db.run(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`, [num, pft, message.author.id, target.id], handlerFunc);
+                db.run(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`, [num, rawPft, message.author.id, target.id], handlerFunc);
             }
         });
     }
