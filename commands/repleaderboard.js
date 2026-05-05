@@ -16,9 +16,11 @@ module.exports = {
           return;
         }
         
-        const gleaderboard = rows.map((row, index) => {
-        return `${index + 1}. <@!${row.user_id}> — ${row.points} points`;
-    }).join('\n');
+        const gleaderboard = rows.length
+          ? rows.map((row, index) => {
+            return `${index + 1}. <@!${row.user_id}> — ${row.points} points`;
+          }).join('\n')
+          : 'No data found.';
 
 
 

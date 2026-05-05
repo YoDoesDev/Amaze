@@ -7,12 +7,15 @@ const db = new sqlite3.Database('./amaze.sqlite', (err) => {
 
 const initDb = () => {
     db.serialize(() => {
+
+        db.run("PRAGMA journal_mode = WAL;"); 
+        db.run("PRAGMA synchronous = OFF;"); 
+        db.run("PRAGMA temp_store = MEMORY;");
         // Table 1: Pings
         db.run(`CREATE TABLE IF NOT EXISTS pings (user_id TEXT PRIMARY KEY, count INTEGER DEFAULT 0)`);
         
         // Table 2: Reputation
         db.run(`CREATE TABLE IF NOT EXISTS reputation (user_id TEXT PRIMARY KEY, points INTEGER DEFAULT 0)`);
-
         // Table 3: Vouch History
         db.run(`CREATE TABLE IF NOT EXISTS vouch_history (
             voucher_id TEXT,
@@ -28,7 +31,7 @@ const initDb = () => {
             dTimestamp INTEGER DEFAULT 0,
             wTimestamp INTEGER DEFAULT 0,
             mTimestamp INTEGER DEFAULT 0)`);
-
+        
         // Table 5: Stonks
         db.run(`CREATE TABLE IF NOT EXISTS investments (
              investor TEXT, 
@@ -38,6 +41,16 @@ const initDb = () => {
              profit INTEGER DEFAULT 0,
              PRIMARY KEY (investor, invested) 
         )`);
+        // Table 6: Inventory
+        db.run(`CREATE TABLE IF NOT EXISTS inventory (
+    userid TEXT PRIMARY KEY,
+    pr_tp INTEGER DEFAULT 0,
+    ddbl_tp INTEGER DEFAULT 0,
+    dblv_tp INTEGER DEFAULT 0,
+    stocklic INTEGER DEFAULT 0,
+    pstone INTEGER DEFAULT 0
+)`);
+
     });
 };
 
