@@ -13,7 +13,7 @@ module.exports = {
     const costPerStock = 70; 
     const totalCost = amt * costPerStock;
     const authorId = message.author.id;
-    
+    const now = message.createdTimestamp;
     if (!targetUser) {
         const errMsg2 = new EmbedBuilder().setColor('#E61010').setTitle(`⚠️ Command Error!`).setDescription("Who do you wanna invest in?\n\nSyntax: `!buystocks @user <number>`");
         return message.reply({embeds: [errMsg2]});
@@ -51,8 +51,8 @@ module.exports = {
         db.serialize(() => {
             db.run(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`, [totalCost, authorId]);
 
-            db.run(`INSERT INTO investments (investor, invested, stocks) VALUES (?, ?, ?)
-              ON CONFLICT (investor, invested) DO UPDATE SET stocks = stocks + excluded.stocks`, 
+            db.run(`INSERT INTO investments (investor, invested, stocks, lastpurchase) VALUES (?, ?, ?)
+              ON CONFLICT (investor, invested) DO UPDATE SET stocks = stocks + excluded.stocks AND lastpurchase = excluded.now`, 
               [authorId, targetUser.id, amt], (insErr) => {
                 
               if (insErr) {
@@ -63,7 +63,7 @@ module.exports = {
               const successMsg = new EmbedBuilder()
                 .setColor('#10E647')
                 .setTitle('Purchase Successful!')
-                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.`);
+                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\nWhen you sell stocks next time:\n1. In 30 mins: 30% transaction fee\n2. In 2 hrs: 20% transaction fee\n3. After two hours: 10% transaction fee`);
               
               message.reply({embeds: [successMsg]});
             });
