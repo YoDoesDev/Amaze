@@ -18,7 +18,7 @@ module.exports = {
       }
       
       const list = rows.map((row, index) => {
-        return `**${index + 1}.** Invested in <@${row.invested}>: **${row.stocks}** stocks (${row.profit} profit)`;
+        return `**${index + 1}.** Invested in <@${row.invested}>: **${row.stocks}** stocks (${Math.round(row.profit)} profit)`;
     }).join('\n');
       
       let embed = new EmbedBuilder().setColor('#E8AE1B').setTitle(`${target.username}'s portfolio`).setDescription(list).setFooter({text: `Requested By: ${message.author.username}.`}).setTimestamp();
