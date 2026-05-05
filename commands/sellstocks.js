@@ -1,76 +1,86 @@
-const { EmbedBuilder } = require('discord.js');
+ const { EmbedBuilder } = require('discord.js');
 const { db } = require('../database.js');
 
 module.exports = {
     name: 'sellstocks',
     category: 'Economy', 
     aliases: ['ss'],
-    description: 'Use this to sell your stocks you invested on a person \n\n Syntax: `!sellstocks <@user> <no_of_stocks>`\nAlias: !ss',
+    description: 'Use this to sell your stocks you invested on a person',
     
     async execute(message, args) {
         const target = message.mentions.users.first();
-        const noOfStocks = args[1] ? args[1].toString() : "1";
-        let num, pft;
+        const noOfStocksInput = args[1] ? args[1].toString() : "1";
+        const now = message.createdTimestamp;
         
-        if (!target) {
-            return message.reply("Whose stocks do you wanna sell?");
-        }
-        if (target.id === message.author.id) {
-            return message.reply("You can't sell your own stocks!");
-        }
-        if (noOfStocks.toLowerCase() !== 'all' && (isNaN(noOfStocks) || noOfStocks % 1 !== 0 || noOfStocks <= 0)) {
+        if (!target) return message.reply("Whose stocks do you wanna sell?");
+        if (target.id === message.author.id) return message.reply("You can't sell your own stocks!");
+
+        if (noOfStocksInput.toLowerCase() !== 'all' && (isNaN(noOfStocksInput) || noOfStocksInput <= 0)) {
             return message.reply("Please enter a valid whole number or 'all'!");
         }
 
-        // We define the handler function inside execute so it can access 'num', 'pft', and 'target'
-        const handlerFunc = (err) => {
-            if (err) {
-                console.log(err);
-                return message.reply("A Database Error Occured!");
-            }
-            
-            db.run(`UPDATE amash SET bucks = bucks + ? + 70 * ? WHERE userid = ?`, [pft, num, message.author.id], (err) => {
-                if (err) {
-                    console.log(err);
-                    return message.reply("A Database Error Occured.");
-                }
-                
-                const keyword = pft > 0 ? "received a profit of" : (pft == 0 ? "received" : "hit by a loss of");
-                
-                const embed = new EmbedBuilder()
-                    .setTitle(`Stocks Sold!`)
-                    .setDescription(`You have sold ${num} stocks of ${target.username} and ${keyword} ${Math.round(Math.abs(pft))}`)
-                    .setTimestamp();
-                
-                return message.reply({ embeds: [embed] });
-            });
-        };
-        
-        db.get(`SELECT stocks, profit FROM investments WHERE invested = ? AND investor = ?`, [target.id, message.author.id], (err, row) => {
-            if (err) {
-                console.log(err);
-                return message.reply("A Database Error Occured!");
-            }
-            if (!row || row.stocks <= 0) {
-                return message.reply(`You have not yet invested on ${target.username}!`);
-            }
-            
-            if (noOfStocks.toLowerCase() === 'all') {
-                num = parseInt(row.stocks);
-                pft = row.profit;
+        db.get(`SELECT stocks, profit, lastpurchase FROM investments WHERE invested = ? AND investor = ?`, [target.id, message.author.id], (err, row) => {
+            if (err) return message.reply("A Database Error Occurred!");
+            if (!row || row.stocks <= 0) return message.reply(`You have not invested in ${target.username}!`);
+
+            // 1. VARIABLE FIX: Access lastpurchase from row
+            const timeHeld = now - row.lastpurchase;
+            let tFee;
+            let feeLabel;
+
+            if (timeHeld < 1000 * 1800) { // 30 mins
+                tFee = 0.3;
+                feeLabel = "30% (Paper Hands)";
+            } else if (timeHeld < 1000 * 7200) { // 2 hours
+                tFee = 0.2;
+                feeLabel = "20% (Early Exit)";
             } else {
-                num = parseInt(noOfStocks);
-                if (num > row.stocks) {
-                    return message.reply(`You only have ${row.stocks} stocks!`);
-                }
-                pft = (row.profit / row.stocks) * num;
+                tFee = 0.1;
+                feeLabel = "10% (Market Standard)";
             }
+
+            let numToSell = noOfStocksInput.toLowerCase() === 'all' ? row.stocks : parseInt(noOfStocksInput);
+            if (numToSell > row.stocks) return message.reply(`You only have ${row.stocks} stocks!`);
+
+            // 2. MATH FIX: Calculate raw value and apply tax
+            const rawProfitForTheseStocks = (row.profit / row.stocks) * numToSell;
+            const principalValue = numToSell * 70;
+            const grossValue = principalValue + rawProfitForTheseStocks;
             
-            // Logic to DELETE if selling everything, otherwise UPDATE
-            if (num >= row.stocks) {
+            const taxAmount = Math.round(grossValue * tFee);
+            const finalPayout = Math.round(grossValue - taxAmount);
+            
+            // This 'pft' is what we add to their balance after the principal 70*num is accounted for
+            // Simplest way: Add finalPayout directly to balance.
+            
+            const handlerFunc = (err) => {
+                if (err) return message.reply("A Database Error Occurred!");
+                
+                db.run(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`, [finalPayout, message.author.id], (err) => {
+                    if (err) return message.reply("A Database Error Occurred.");
+                    
+                    const profitLoss = finalPayout - principalValue;
+                    const keyword = profitLoss > 0 ? "profit of" : (profitLoss === 0 ? "break-even of" : "loss of");
+                    
+                    const embed = new EmbedBuilder()
+                        .setTitle(`📊 Stocks Sold!`)
+                        .setColor(profitLoss >= 0 ? '#10E647' : '#E61010')
+                        .setDescription(`Sold **${numToSell}** stocks of **${target.username}**.\n\n` +
+                                        `**Market Tax:** ${feeLabel}\n` +
+                                        `**Tax Paid:** -${taxAmount} Amash\n` +
+                                        `**Final Payout:** ${finalPayout} Amash\n\n` +
+                                        `You hit a ${keyword} **${Math.abs(Math.round(profitLoss))}** Amash.`)
+                        .setTimestamp();
+                    
+                    return message.reply({ embeds: [embed] });
+                });
+            };
+
+            if (numToSell >= row.stocks) {
                 db.run(`DELETE FROM investments WHERE investor = ? AND invested = ?`, [message.author.id, target.id], handlerFunc);
             } else {
-                db.run(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`, [num, pft, message.author.id, target.id], handlerFunc);
+                db.run(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`, 
+                [numToSell, rawProfitForTheseStocks, message.author.id, target.id], handlerFunc);
             }
         });
     }

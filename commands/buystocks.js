@@ -13,7 +13,7 @@ module.exports = {
     const costPerStock = 70; 
     const totalCost = amt * costPerStock;
     const authorId = message.author.id;
-    
+    const now = message.createdTimestamp;
     if (!targetUser) {
         const errMsg2 = new EmbedBuilder().setColor('#E61010').setTitle(`⚠️ Command Error!`).setDescription("Who do you wanna invest in?\n\nSyntax: `!buystocks @user <number>`");
         return message.reply({embeds: [errMsg2]});
@@ -51,9 +51,9 @@ module.exports = {
         db.serialize(() => {
             db.run(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`, [totalCost, authorId]);
 
-            db.run(`INSERT INTO investments (investor, invested, stocks) VALUES (?, ?, ?)
-              ON CONFLICT (investor, invested) DO UPDATE SET stocks = stocks + excluded.stocks`, 
-              [authorId, targetUser.id, amt], (insErr) => {
+            db.run(`INSERT INTO investments (investor, invested, stocks, lastpurchase) VALUES (?, ?, ?, ?)
+              ON CONFLICT (investor, invested) DO UPDATE SET stocks = stocks + excluded.stocks, lastpurchase = excluded.lastpurchase`, 
+              [authorId, targetUser.id, amt, now], (insErr) => {
                 
               if (insErr) {
                 console.error(insErr);
@@ -63,7 +63,7 @@ module.exports = {
               const successMsg = new EmbedBuilder()
                 .setColor('#10E647')
                 .setTitle('Purchase Successful!')
-                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.`);
+                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: **30% fee**\n🕒 < 2 hrs: **20% fee**\n🕒 > 2 hrs: **10% fee**\n\n**NOTE**: The time will reset everytime you buy a new stock of this person.`);
               
               message.reply({embeds: [successMsg]});
             });
