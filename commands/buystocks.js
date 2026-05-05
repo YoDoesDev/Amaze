@@ -53,7 +53,7 @@ module.exports = {
 
             db.run(`INSERT INTO investments (investor, invested, stocks, lastpurchase) VALUES (?, ?, ?, ?)
               ON CONFLICT (investor, invested) DO UPDATE SET stocks = stocks + excluded.stocks, lastpurchase = excluded.lastpurchase`, 
-              [authorId, targetUser.id, amt], (insErr) => {
+              [authorId, targetUser.id, amt, now], (insErr) => {
                 
               if (insErr) {
                 console.error(insErr);
