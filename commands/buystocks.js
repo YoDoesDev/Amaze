@@ -63,7 +63,7 @@ module.exports = {
               const successMsg = new EmbedBuilder()
                 .setColor('#10E647')
                 .setTitle('Purchase Successful!')
-                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: **30% fee**\n🕒 < 2 hrs: **20% fee**\n🕒 > 2 hrs: **10% fee**\n\n**NOTE**: The time will reset everytime you buy a new stock of this person.`);
+                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: **7% fee**\n🕒 < 2 hrs: **3% fee**\n🕒 > 2 hrs: **1% fee**\n\n**NOTE**: The time will reset everytime you buy a new stock of this person.`);
               
               message.reply({embeds: [successMsg]});
             });
