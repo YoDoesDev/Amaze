@@ -41,7 +41,6 @@ const initDb = () => {
              profit INTEGER DEFAULT 0,
              PRIMARY KEY (investor, invested) 
         )`);
-        db.run(`ALTER TABLE investments ADD COLUMN lastpurchase INTEGER DEFAULT 0`);
         // Table 6: Inventory
         db.run(`CREATE TABLE IF NOT EXISTS inventory (
     userid TEXT PRIMARY KEY,
