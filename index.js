@@ -30,7 +30,7 @@ for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
     client.commands.set(command.name, command);
 }
-console.log(`Amaze v1.0.1: Registered ${commandFiles.length} commands.`);
+console.log(`Amaze v1.1.0: Registered ${commandFiles.length} commands.`);
 
 const cooldowns = new Map();
 
@@ -83,7 +83,7 @@ client.on('messageCreate', async (message) => {
     try {
         await command.execute(message, args);
         if(Math.random() < 0.1){
-            message.reply(`${<@message.author.id>}, having fun on Amaze? Feel free to vote me and leave a review using the \`!vote\` command!`);
+            message.reply(`<@${message.author.id}>, having fun on Amaze? Feel free to vote me and leave a review using the \`!vote\` command!`);
         }
     } catch (error) {
         console.error(`Error in ${commandName}:`, error);
