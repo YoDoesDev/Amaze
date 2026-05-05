@@ -29,14 +29,14 @@ module.exports = {
             let feeLabel;
 
             if (timeHeld < 1000 * 1800) { // 30 mins
-                tFee = 0.3;
-                feeLabel = "30% (Paper Hands)";
+                tFee = 0.07;
+                feeLabel = "7% (Paper Hands)";
             } else if (timeHeld < 1000 * 7200) { // 2 hours
-                tFee = 0.2;
-                feeLabel = "20% (Early Exit)";
+                tFee = 0.03;
+                feeLabel = "3% (Early Exit)";
             } else {
-                tFee = 0.1;
-                feeLabel = "10% (Market Standard)";
+                tFee = 0.01;
+                feeLabel = "1% (Market Standard)";
             }
 
             let numToSell = noOfStocksInput.toLowerCase() === 'all' ? row.stocks : parseInt(noOfStocksInput);
