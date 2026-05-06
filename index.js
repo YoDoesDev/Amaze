@@ -82,7 +82,7 @@ client.on('messageCreate', async (message) => {
     // 4. Execution
     try {
         await command.execute(message, args);
-        if(Math.random() < 0.1){
+        if(Math.random() < 0.025){
             message.reply(`<@${message.author.id}>, having fun on Amaze? Feel free to vote me and leave a review using the \`!vote\` command!`);
         }
     } catch (error) {
