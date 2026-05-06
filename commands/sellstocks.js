@@ -1,4 +1,4 @@
- const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder } = require('discord.js');
 const { db } = require('../database.js');
 
 module.exports = {
@@ -29,10 +29,10 @@ module.exports = {
             let feeLabel;
 
             if (timeHeld < 1000 * 1800) { // 30 mins
-                tFee = 0.07;
+                tFee = 0.04;
                 feeLabel = "7% (Paper Hands)";
             } else if (timeHeld < 1000 * 7200) { // 2 hours
-                tFee = 0.03;
+                tFee = 0.02;
                 feeLabel = "3% (Early Exit)";
             } else {
                 tFee = 0.01;
