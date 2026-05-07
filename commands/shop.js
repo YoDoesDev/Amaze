@@ -47,7 +47,7 @@ const items = {
 module.exports = {
     name: 'shop',
     description: 'View the items available for purchase in Amaze.',
-    category: 'Economy',
+    category: 'Shop',
     async execute(message, args) {
         const shopEmbed = new EmbedBuilder()
             .setTitle("🏪 Amaze Global Shop")
