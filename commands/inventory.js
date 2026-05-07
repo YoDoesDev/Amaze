@@ -3,6 +3,7 @@ const { db } = require('../database.js');
 
 module.exports = {
   name: 'inventory', 
+  category: 'Shop', 
   aliases: ['inv'], 
   description: 'Use this to check what you have bought.', 
   async execute(message){
