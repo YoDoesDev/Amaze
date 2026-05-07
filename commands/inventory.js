@@ -27,11 +27,7 @@ module.exports = {
       const pstone = row.pstone;
       const lic = row.stocklic < 1? 'NOT ACQUIRED':'ACQUIRED';
       
-      const msg = `1. 🛡 PR Shield: ${pr}
-      2. ⏭️ Vouch Doubler: ${dblv}
-      3. ↘️ Defame Doubler: ${ddbl}
-      4. 💎 Philosopher's Stone: ${pstone}
-      5. 📃 Stock License: ${lic}`;
+      const msg = `1. 🛡 PR Shield: ${pr}\n2. ⏭️ Vouch Doubler: ${dblv}\n3. ↘️ Defame Doubler: ${ddbl}\n4. 💎 Philosopher's Stone: ${pstone}\n5. 📃 Stock License: ${lic}`;
       
       const embed = new EmbedBuilder().setTitle(`${message.author.username}'s Inventory`).setThumbnail(url).setDescription(msg).setTimestamp().setColor('#3A70DC');
       
