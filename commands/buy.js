@@ -3,7 +3,7 @@ const { items } = require('./shop.js');
 
 module.exports = {
     name: 'buy',
-    category: 'Economy',
+    category: 'Shop',
     description: 'Purchase an item from the shop.',
     async execute(message, args) {
         const itemCode = args[0];
