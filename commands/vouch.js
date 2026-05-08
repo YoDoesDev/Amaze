@@ -4,7 +4,7 @@ module.exports = {
     name: 'vouch',
     category: 'Reputation', 
     cooldown: 60,
-    description: 'Vouch for a user with a 8-hour cooldown per person.\n\nSyntax: `!vouch <@user>`\n\n<> = REQUIRED\n[] = OPTIONAL',
+    description: 'Vouch for a user with a 8-hour cooldown per person.\n\nSyntax: `!vouch <@user>`',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
@@ -15,57 +15,49 @@ module.exports = {
         if (targetUser.id === authorId) return message.reply("Self-vouching? Focus on the work, not the praise.");
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
-        // 1. Check Cooldown and Inventory for Vouch Doubler
-        // Using a JOIN to check the inventory table for dblv_tp
-        db.get(
-            `SELECT v.timestamp, i.dblv_tp 
-             FROM amash a 
-             LEFT JOIN vouch_history v ON v.voucher_id = ? AND v.receiver_id = ?
-             LEFT JOIN inventory i ON i.userid = ?
-             WHERE a.userid = ?`,
-            [authorId, targetUser.id, authorId, authorId],
-            (err, row) => {
-                if (err) {
-                    console.error("Database Error:", err);
-                    return message.reply("A logic error occurred while checking history.");
-                }
+        try {
+            // 1. Fetch History and Doubler Status
+            const row = db.prepare(`
+                SELECT 
+                    (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
+                    (SELECT dblv_tp FROM inventory WHERE userid = ?) as vouch_doubler
+            `).get(authorId, targetUser.id, authorId);
 
-                if (row && row.timestamp && (now - row.timestamp) < cooldownTime) {
-                    const timeLeft = Math.ceil((cooldownTime - (now - row.timestamp)) / (60 * 1000));
-                    const hours = Math.floor(timeLeft / 60);
-                    const minutes = timeLeft % 60;
-                    return message.reply(`This user's reputation was recently influenced. Wait **${hours}h ${minutes}m** to fame or defame them again.`);
-                }
-
-                // 2. Check if Doubler is Active
-                const isDoubled = row && row.dblv_tp && now < row.dblv_tp;
-                const multiplier = isDoubled ? 2 : 1;
-
-                db.serialize(() => {
-                    // Update history
-                    db.run(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`, [authorId, targetUser.id, now]);
-
-                    // Ensure reputation row exists
-                    db.run(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`, [targetUser.id]);
-
-                    // 3. Update Reputation (Multiplied)
-                    db.run(`UPDATE reputation SET points = points + ? WHERE user_id = ?`, [multiplier, targetUser.id]);
-
-                    // 4. Update Investor Profits (Multiplied)
-                    const profitGain = 5 * multiplier;
-                    db.run(`UPDATE investments SET profit = profit + (stocks * ?) WHERE invested = ?`, [profitGain, targetUser.id], (err) => {
-                        if (err) console.error("Investment Update Error:", err);
-                    });
-
-                    db.get(`SELECT points FROM reputation WHERE user_id = ?`, [targetUser.id], (fetchErr, repRow) => {
-                        if (repRow) {
-                            let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow.points}** reputation points.`;
-                            if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
-                            message.channel.send(msg);
-                        }
-                    });
-                });
+            // 2. Cooldown Check
+            if (row?.last_vouch && (now - row.last_vouch) < cooldownTime) {
+                const timeLeftMs = cooldownTime - (now - row.last_vouch);
+                const hrs = Math.floor(timeLeftMs / 3600000);
+                const mins = Math.floor((timeLeftMs % 3600000) / 60000);
+                return message.reply(`This user's reputation was recently influenced. Wait **${hrs}h ${mins}m** to fame them again.`);
             }
-        );
+
+            // 3. Check for Doubler
+            const isDoubled = row?.vouch_doubler && now < row.vouch_doubler;
+            const multiplier = isDoubled ? 2 : 1;
+
+            // 4. Atomic Execution (Sequential)
+            // Update history
+            db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
+
+            // Ensure reputation row exists and Update
+            db.prepare(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`).run(targetUser.id);
+            db.prepare(`UPDATE reputation SET points = points + ? WHERE user_id = ?`).run(multiplier, targetUser.id);
+
+            // Update Investor Profits (Multiplied)
+            const profitGain = 5 * multiplier;
+            db.prepare(`UPDATE investments SET profit = profit + (stocks * ?) WHERE invested = ?`).run(profitGain, targetUser.id);
+
+            // 5. Fetch and Respond
+            const repRow = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
+            
+            let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points.`;
+            if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
+            
+            await message.channel.send(msg);
+
+        } catch (err) {
+            console.error("Vouch Command Error:", err);
+            return message.reply("A database error occurred while recording the vouch.");
+        }
     }
 };

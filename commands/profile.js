@@ -10,55 +10,52 @@ module.exports = {
     async execute(message, args) {
         const user = message.mentions.users.first() || message.author;
 
-        // Get da money from the base
-        db.get(`SELECT bucks FROM amash WHERE userid = ?`, [user.id], (err, amashRow) => {
-            if (err) {
-                console.error(err);
-                return message.reply('Database error.');
-            }
-
+        try {
+            // 1. Fetch Amash (Directly assigned)
+            const amashRow = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(user.id);
             const bucks = amashRow ? amashRow.bucks : '0 (UNOPENED)';
 
-            // Get reps and ranks
-            db.all(`SELECT user_id, points FROM reputation ORDER BY points DESC`, [], (err, rows) => {
-                if (err) {
-                    console.error(err);
-                    return message.reply('Database error.');
-                }
+            // 2. Fetch All Reputations for Ranking
+            // We fetch everything to find the user's position in the leaderboard
+            const rows = db.prepare(`SELECT user_id, points FROM reputation ORDER BY points DESC`).all();
 
-                let rep = 0;
-                let rank = 'Unranked';
+            let rep = 0;
+            let rank = 'Unranked';
 
-                const index = rows.findIndex(r => r.user_id === user.id);
+            const index = rows.findIndex(r => r.user_id === user.id);
 
-                if (index !== -1) {
-                    rep = rows[index].points;
-                    rank = index + 1;
-                }
+            if (index !== -1) {
+                rep = rows[index].points;
+                rank = index + 1;
+            }
 
-                const embed = new EmbedBuilder()
-                    .setTitle(`${user.username}'s Profile`)
-                    .setThumbnail(user.displayAvatarURL())
-                    .setColor('#3498DB')
-                    .addFields(
-                        {
-                           name: 'User',
-                            value: user.username,
-                           inline: false
-                        },
-                        {
-                            name: 'Stats',
-                            value: 
-                                `💰 **Amash:** ${bucks}\n` +
-                                `⭐ **Reputation:** ${rep}\n` +
-                                `🏆 **Rank:** #${rank}`,
-                            inline: false
-                        }
-                    )
-                    .setFooter({ text: `Requested by ${message.author.username}` });
+            // 3. Build and Send Embed
+            const embed = new EmbedBuilder()
+                .setTitle(`${user.username}'s Profile`)
+                .setThumbnail(user.displayAvatarURL())
+                .setColor('#3498DB')
+                .addFields(
+                    {
+                        name: 'User',
+                        value: user.username,
+                        inline: false
+                    },
+                    {
+                        name: 'Stats',
+                        value: 
+                            `💰 **Amash:** ${bucks}\n` +
+                            `⭐ **Reputation:** ${rep}\n` +
+                            `🏆 **Rank:** #${rank}`,
+                        inline: false
+                    }
+                )
+                .setFooter({ text: `Requested by ${message.author.username}` });
 
-                message.reply({ embeds: [embed] });
-            });
-        });
+            await message.reply({ embeds: [embed] });
+
+        } catch (err) {
+            console.error("Profile Command Error:", err);
+            return message.reply('An error occurred while fetching the profile.');
+        }
     }
 };

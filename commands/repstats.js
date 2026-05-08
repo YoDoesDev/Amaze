@@ -6,34 +6,29 @@ module.exports = {
     aliases: ['rs'], 
     category: 'Reputation', 
     cooldown: 60,
-    description: 'Check your/other\'s  reputation points\n\nSyntax: `!repstats [@user]`\n\n<> = REQUIRED\n [] = OPTIONAL\n Alias: !rs',
+    description: 'Check your/other\'s reputation points\n\nSyntax: `!repstats [@user]`',
     async execute(message, args) {
-        console.log(">>> [DEBUG] repstats command started");
-
         try {
             const targetUser = message.mentions.users.first() || message.author;
-            console.log(`>>> [DEBUG] Targeting user: ${targetUser.tag} (${targetUser.id})`);
 
-            db.get(`SELECT points FROM reputation WHERE user_id = ?`, [targetUser.id], (err, row) => {
-                if (err) {
-                    console.error(">>> [ERROR] SQL Error:", err.message);
-                    return message.reply("Database error occurred.");
-                }
+            // 1. Fetch points (Synchronous & Direct)
+            // No callback needed; the code waits here until db returns the row.
+            const row = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
+            
+            const points = row?.points ?? 0;
 
-                console.log(">>> [DEBUG] DB Row Result:", row);
-                const points = row ? row.points : 0;
+            // 2. Build and Send
+            const embed = new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle(`${targetUser.username}'s Standing`)
+                .setDescription(`✨ **Total Reputation:** ${points} points`)
+                .setTimestamp();
 
-                const embed = new EmbedBuilder()
-                    .setColor(0x5865F2)
-                    .setTitle(`${targetUser.username}'s Standing`)
-                    .setDescription(`✨ **Total Reputation:** ${points} points`);
+            await message.channel.send({ embeds: [embed] });
 
-                message.channel.send({ embeds: [embed] })
-                    .then(() => console.log(">>> [DEBUG] Embed sent successfully"))
-                    .catch(e => console.error(">>> [ERROR] Failed to send embed:", e));
-            });
         } catch (error) {
-            console.error(">>> [CRITICAL] Execution crashed:", error);
+            console.error(">>> [CRITICAL] RepStats Execution crashed:", error);
+            message.reply("Could not retrieve reputation data at this moment.");
         }
     }
 };
