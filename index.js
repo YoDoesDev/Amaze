@@ -1,6 +1,6 @@
 // Automated Deploy Active: May 1, 2026.
 
-const { Client, Collection, GatewayIntentBits, REST, Routes } = require('discord.js');
+const { Client, Collection, GatewayIntentBits, REST, Routes, ActivityType} = require('discord.js');
 const { initDb, db } = require('./database.js');
 const express = require('express');
 const app = express();
@@ -20,8 +20,8 @@ const client = new Client({
 client.once("clientReady", () => {
     console.log("Bot is ready. GLHF, devs.");
 
-    client.user.setActivity('!help | Circulating amash', { 
-         
+    client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers.`, { 
+         type: ActivityType.Watching
     });
     
     /* Other types we can use:
