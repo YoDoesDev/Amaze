@@ -1,12 +1,15 @@
 // Automated Deploy Active: May 1, 2026.
+// Amaze Bot - Optimized for Performance and Scalability
 
-const { Client, Collection, GatewayIntentBits, REST, Routes, ActivityType} = require('discord.js');
+const { Client, Collection, GatewayIntentBits, ActivityType } = require('discord.js');
 const { initDb, db } = require('./database.js');
 const express = require('express');
 const app = express();
-app.use(express.json());
 const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
+
+app.use(express.json());
 
 const client = new Client({ 
     intents: [
@@ -16,32 +19,43 @@ const client = new Client({
         GatewayIntentBits.DirectMessages
     ] 
 });
+
+// Keeping your 'clientReady' as per latest updates
 client.once("clientReady", () => {
     console.log("Bot is ready. GLHF, devs.");
 
     client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers.`, { 
          type: ActivityType.Watching
     });
-    
-    /* Other types we can use:
-       ActivityType.Watching   -> "Watching !help | ..."
-       ActivityType.Listening  -> "Listening to !help | ..."
-       ActivityType.Competing  -> "Competing in !help | ..."
-    */
-  });
+});
 
 client.commands = new Collection();
-// Database initialized inside database.js is usually cleaner, 
-// but we keep initDb() here as per your current structure.
 initDb();
 
-// Command Registration
-const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
-for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
-    client.commands.set(command.name, command);
+// --- COMMAND REGISTRATION (SUBFOLDER SUPPORT) ---
+const foldersPath = path.join(__dirname, 'commands');
+const commandFolders = fs.readdirSync(foldersPath);
+
+for (const folder of commandFolders) {
+    const folderPath = path.join(foldersPath, folder);
+    
+    if (fs.lstatSync(folderPath).isDirectory()) {
+        const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
+        for (const file of commandFiles) {
+            const filePath = path.join(folderPath, file);
+            const command = require(filePath);
+            
+            if ('name' in command && 'execute' in command) {
+                command.category = folder; 
+                client.commands.set(command.name, command);
+            }
+        }
+    } else if (folder.endsWith('.js')) {
+        const command = require(path.join(foldersPath, folder));
+        client.commands.set(command.name, command);
+    }
 }
-console.log(`Amaze v1.1.0: Registered ${commandFiles.length} commands.`);
+console.log(`Amaze v1.1.0: Registered ${client.commands.size} commands across categories.`);
 
 const cooldowns = new Map();
 
@@ -49,11 +63,9 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
 
     try {
-        // 1. Fetch Prefix (SYNCHRONOUS - No more callback!)
         const row = db.prepare("SELECT prefix FROM guild_settings WHERE guildid = ?").get(message.guild.id);
         const prefix = row?.prefix || "!";
 
-        // 2. Logic for mentions/keywords
         if (!message.content.startsWith(prefix)) {
             const content = message.content.toLowerCase();
 
@@ -71,7 +83,6 @@ client.on('messageCreate', async (message) => {
             return;
         }
 
-        // 3. Command Parsing
         const args = message.content.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
 
@@ -80,7 +91,6 @@ client.on('messageCreate', async (message) => {
 
         if (!command) return;
 
-        // 4. Cooldown Logic
         const cooldownKey = command.cooldownGroup || command.name;
         const cooldownAmount = (command.cooldown || 5) * 1000;
 
@@ -101,13 +111,10 @@ client.on('messageCreate', async (message) => {
         }
 
         timestamp.set(message.author.id, now);
-
-        // 5. Execute Command
         await command.execute(message, args);
 
-        // 6. Random Vote Reminder
         if (Math.random() < 0.025) {
-            message.reply(`<@${message.author.id}>, having fun on Amaze? Feel free to vote me and leave a review using the \`${prefix}vote\` command!`);
+            message.reply(`Having fun on Amaze? Feel free to vote and leave a review using the \`${prefix}vote\` command!`);
         }
 
     } catch (error) {
@@ -116,15 +123,12 @@ client.on('messageCreate', async (message) => {
     }
 });
 
-// WEBHOOK: Optimized for Latency
 app.post('/votereward', (req, res) => {
     res.status(200).send("OK");
-
     const { userId } = req.body;
     if (!userId) return;
 
     try {
-        // Atomic Update - No serialize needed with better-sqlite3
         db.prepare(`
             INSERT INTO amash (userid, bucks) 
             VALUES(?, 150) 
@@ -136,7 +140,7 @@ app.post('/votereward', (req, res) => {
         
         client.users.fetch(userId)
             .then(user => user.send("Thanks for voting! You've received **150 bucks**. 🚀"))
-            .catch(() => {}); // DM check
+            .catch(() => {}); 
             
     } catch (err) {
         console.error(">>> [ERROR] Vote Reward DB Fail:", err.message);
