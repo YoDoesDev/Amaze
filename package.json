@@ -6,6 +6,6 @@
     "discord.js": "^14.26.3",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "sqlite3": "^6.0.1"
+    "better-sqlite3": "^11.0.0"
   }
 }
