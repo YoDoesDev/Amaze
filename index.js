@@ -17,10 +17,19 @@ const client = new Client({
         GatewayIntentBits.DirectMessages
     ] 
 });
-
-client.once("clientReady", () => { // Fixed event name from "clientReady" to "ready"
+client.once("clientReady", () => {
     console.log("Bot is ready. GLHF, devs.");
-});
+
+    client.user.setActivity('!help | Circulating amash', { 
+        type: ActivityType.Playing 
+    });
+    
+    /* Other types we can use:
+       ActivityType.Watching   -> "Watching !help | ..."
+       ActivityType.Listening  -> "Listening to !help | ..."
+       ActivityType.Competing  -> "Competing in !help | ..."
+    */
+  });
 
 client.commands = new Collection();
 initDb();
