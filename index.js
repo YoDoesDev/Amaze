@@ -36,80 +36,98 @@ console.log(`Amaze v1.1.0: Registered ${commandFiles.length} commands.`);
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot || !message.guild) return;
 
-    const prefix = '!';
-    
-    // 1. Quick Response Logic (Trigger Words)
-    // We only do this if it's NOT a command to save processing time
-    if (!message.content.startsWith(prefix)) {
-        const content = message.content.toLowerCase();
-        
-        if (['thx', 'thanks', 'thank you', 'tysm'].some(w => content.includes(w))) {
-            if (Math.random() < 0.3) {
-                return message.channel.send(`Glad you're happy! Remember, you can use \`!vouch @user\` to increase their reputation!`);
+    db.get(
+        "SELECT prefix FROM guild_settings WHERE guildid = ?",
+        [message.guild.id],
+        async (err, row) => {
+
+            if (err) {
+                console.error(err);
+                return;
+            }
+
+            const prefix = row?.prefix || "!";
+
+            if (!message.content.startsWith(prefix)) {
+                const content = message.content.toLowerCase();
+
+                if (['thx', 'thanks', 'thank you', 'tysm'].some(w => content.includes(w))) {
+                    if (Math.random() < 0.3) {
+                        return message.channel.send(
+                            `Glad you're happy! Remember, you can use \`${prefix}vouch @user\` to increase their reputation!`
+                        );
+                    }
+                }
+
+                if (['fk u', 'fuck you', 'fuck u', 'i hate u'].some(w => content.includes(w))) {
+                    if (Math.random() < 0.6) {
+                        return message.channel.send(
+                            `Angry at someone? Use \`${prefix}defame @user\` to decrease their reputation!`
+                        );
+                    }
+                }
+
+                return;
+            }
+
+            const args = message.content
+                .slice(prefix.length)
+                .trim()
+                .split(/ +/);
+
+            const commandName = args.shift().toLowerCase();
+
+            const command =
+                client.commands.get(commandName) ||
+                client.commands.find(cmd =>
+                    cmd.aliases && cmd.aliases.includes(commandName)
+                );
+
+            if (!command) return;
+
+            const cooldownKey = command.cooldownGroup || command.name;
+            const cooldownAmount = (command.cooldown || 5) * 1000;
+
+            if (!cooldowns.has(cooldownKey)) {
+                cooldowns.set(cooldownKey, new Map());
+            }
+
+            const timestamp = cooldowns.get(cooldownKey);
+            const now = Date.now();
+
+            if (timestamp.has(message.author.id)) {
+                const timeWhenCooldownEnds =
+                    timestamp.get(message.author.id) + cooldownAmount;
+
+                if (now < timeWhenCooldownEnds) {
+                    const timeLeft =
+                        ((timeWhenCooldownEnds - now) / 1000).toFixed(0);
+
+                    return message.reply(
+                        `Slow down! Wait **${timeLeft}s** before using a \`${cooldownKey}\` command again.`
+                    );
+                }
+            }
+
+            timestamp.set(message.author.id, now);
+
+            try {
+                await command.execute(message, args);
+
+                if (Math.random() < 0.025) {
+                    message.reply(
+                        `<@${message.author.id}>, having fun on Amaze? Feel free to vote me and leave a review using the \`${prefix}vote\` command!`
+                    );
+                }
+
+            } catch (error) {
+                console.error(`Error in ${commandName}:`, error);
+                message.reply("There was an error executing that command!");
             }
         }
-        
-        if (['fk u', 'fuck you', 'fuck u', 'i hate u'].some(w => content.includes(w))) {
-            if (Math.random() < 0.6) {
-                return message.channel.send(`Angry at someone? Use \`!defame @user\` to decrease their reputation!`);
-            }
-        }
-        return;
-    }
-    
-    if (!message.content.startsWith(prefix) || message.author.bot) return;
-
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
-
-    const command = client.commands.get(commandName) || 
-                client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
-    
-    if (!command) return;
-
-    // I will be commenting everything because this is hard
-    // Note to self: set cooldown in SECONDS.
-
-    const cooldownKey = command.cooldownGroup || command.name;
-    const cooldownAmount = (command.cooldown || 5) * 1000;
-
-    // Make a new key-value pair which is ANOTHER MAP in cooldowns if it aint exist already
-    if (!cooldowns.has(cooldownKey)) {
-        cooldowns.set(cooldownKey, new Map());
-    }
-    
-    // picking up a map from the cooldowns
-    const timestamp = cooldowns.get(cooldownKey);
-    const now = Date.now();
-
-    // timestamp is in the format userID => time
-
-    if (timestamp.has(message.author.id)) {
-        const timeWhenCooldownEnds = timestamp.get(message.author.id) + cooldownAmount;
-
-        if (now < timeWhenCooldownEnds) {
-            const timeLeft = ((timeWhenCooldownEnds - now) / 1000).toFixed(0);
-
-            return message.reply(
-                `Slow down! Wait **${timeLeft}s** before using a \`${cooldownKey}\` command again.`
-            );
-        }
-    }
-
-    timestamp.set(message.author.id, now);
-
-    // 4. Execution
-    try {
-        await command.execute(message, args);
-        if(Math.random() < 0.025){
-            message.reply(`<@${message.author.id}>, having fun on Amaze? Feel free to vote me and leave a review using the \`!vote\` command!`);
-        }
-    } catch (error) {
-        console.error(`Error in ${commandName}:`, error);
-        message.reply("There was an error executing that command!");
-    }
+    );
 });
 
 // WEBHOOK: Optimized for Latency
