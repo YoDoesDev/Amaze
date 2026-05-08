@@ -14,37 +14,47 @@ module.exports = {
         if (targetUser.id === authorId) return message.reply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
+        if (!targetUser || targetUser.id === authorId || targetUser.bot) return;
+
+        // 1. STRICT SHIELD & COOLDOWN CHECK
+        // We fetch the target's shield AND the specific history between these two people
         db.get(
-            `SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?`,
-            [authorId, targetUser.id],
+            `SELECT 
+                (SELECT pr_tp FROM inventory WHERE userid = ?) as target_shield,
+                (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
+                (SELECT ddbl_tp FROM inventory WHERE userid = ?) as author_doubler`,
+            [targetUser.id, authorId, targetUser.id, authorId],
             (err, row) => {
-                if (err) {
-                    console.error("Database Error:", err);
-                    return message.reply("A logic error occurred while checking history.");
+                if (err) return console.error(err);
+
+                // Check Shield First (The most important wall)
+                if (row && row.target_shield && now < row.target_shield) {
+                    return message.reply(`🛡️ **PR Shield Active!** ${targetUser.username} is protected.`);
                 }
 
-                if (row && (now - row.timestamp) < cooldownTime) {
-                    const timeLeft = Math.ceil((cooldownTime - (now - row.timestamp)) / (60 * 1000));
-                    const hours = Math.floor(timeLeft / 60);
-                    const minutes = timeLeft % 60;
-                    return message.reply(`This user's reputation was recently influenced. Wait **${hours}h ${minutes}m** to fame or defame them again.`);
+                // Check Cooldown (To stop the "3 times in a row" guy)
+                if (row && row.last_vouch && (now - row.last_vouch) < cooldownTime) {
+                    const timeLeft = Math.ceil((cooldownTime - (now - row.last_vouch)) / (60 * 1000));
+                    return message.reply(`Slow down! Cooldown active for another **${Math.floor(timeLeft/60)}h ${timeLeft%60}m**.`);
                 }
 
+                const multiplier = (row && row.author_doubler && now < row.author_doubler) ? 2 : 1;
+
+                // 2. THE ATOMIC UPDATE
                 db.serialize(() => {
-                    db.run(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`, [authorId, targetUser.id, now]);
+                    // Lock the cooldown immediately
+                    db.run(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`, 
+                        [authorId, targetUser.id, now]);
                     
-                    db.run(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`, [targetUser.id]);
+                    db.run(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`);
+                    db.run(`UPDATE reputation SET points = points - ? WHERE user_id = ?`, [multiplier, targetUser.id]);
+                    
+                    // Impact investors
+                    db.run(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`, [5 * multiplier, targetUser.id]);
 
-                    db.run(`UPDATE reputation SET points = points - 1 WHERE user_id = ?`, [targetUser.id]);
-
-                    // 4. Update Investor Profits
-                    db.run(`UPDATE investments SET profit = profit - (stocks * 5) WHERE invested = ?`, [targetUser.id], (err) => {
-                        if (err) console.error("Investment Update Error:", err);
-                    });
-
-                    db.get(`SELECT points FROM reputation WHERE user_id = ?`, [targetUser.id], (fetchErr, repRow) => {
-                        if (repRow) {
-                            message.channel.send(`🥀 **Defamation Recorded!** ${targetUser.username} now has **${repRow.points}** reputation points.`);
+                    db.get(`SELECT points FROM reputation WHERE user_id = ?`, [targetUser.id], (e, res) => {
+                        if (res) {
+                            message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${res.points}** rep. ${multiplier > 1 ? '↘️ **(x2)**' : ''}`);
                         }
                     });
                 });

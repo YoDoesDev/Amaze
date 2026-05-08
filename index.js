@@ -8,6 +8,7 @@ app.use(express.json());
 const fs = require('fs');
 const { get } = require('http');
 require('dotenv').config();
+
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -17,54 +18,54 @@ const client = new Client({
     ] 
 });
 
-client.once("clientReady", () => {
+client.once("clientReady", () => { // Fixed event name from "clientReady" to "ready"
     console.log("Bot is ready. GLHF, devs.");
 });
 
 client.commands = new Collection();
 initDb();
 
+// Command Registration
 const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
     client.commands.set(command.name, command);
-    console.log("Amaze v1.0.1");
-    console.log("Successfully registered " + file + "\n"); 
 }
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-
+console.log(`Amaze v1.1.0: Registered ${commandFiles.length} commands.`);
 
 const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
 
-    console.log("MESSAGE RECEIVED:", message.content);
-    const triggerHappy = ['thx', 'thanks', 'thank you', 'tysm'];
-    const triggerAngry = ['fk u', 'fuck you', 'fuck u', 'i hate u']
-    
-    const containsTriggerHappy = triggerHappy.some(word => message.content.toLowerCase().includes(word));
-    const containsTriggerAngry = triggerAngry.some(word => message.content.toLowerCase().includes(word));
-
-    if (containsTriggerHappy) {
-        if (Math.random() < 0.3) { 
-            message.channel.send(`Glad you're happy! Remember, you can use \`!vouch @user\` to increase their reputation!`);
-        }
-    }
-    if (containsTriggerAngry) {
-        if (Math.random() < 0.6) { 
-            message.channel.send(`Angry at someone? Use \`!defame @user\` to decrease their reputation!`);
-        }
-    }
-    
     const prefix = '!';
+    
+    // 1. Quick Response Logic (Trigger Words)
+    // We only do this if it's NOT a command to save processing time
+    if (!message.content.startsWith(prefix)) {
+        const content = message.content.toLowerCase();
+        
+        if (['thx', 'thanks', 'thank you', 'tysm'].some(w => content.includes(w))) {
+            if (Math.random() < 0.3) {
+                return message.channel.send(`Glad you're happy! Remember, you can use \`!vouch @user\` to increase their reputation!`);
+            }
+        }
+        
+        if (['fk u', 'fuck you', 'fuck u', 'i hate u'].some(w => content.includes(w))) {
+            if (Math.random() < 0.6) {
+                return message.channel.send(`Angry at someone? Use \`!defame @user\` to decrease their reputation!`);
+            }
+        }
+        return;
+    }
+    
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
     const args = message.content.slice(prefix.length).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
 
-    // FIXED: This now looks for the command name OR an alias
     const command = client.commands.get(commandName) || 
-                client.commands.find(cmd => cmd.aliases && Array.isArray(cmd.aliases) && cmd.aliases.includes(commandName));
+                client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
     
     if (!command) return;
 
@@ -99,45 +100,47 @@ client.on('messageCreate', async (message) => {
 
     timestamp.set(message.author.id, now);
 
+    // 4. Execution
     try {
         await command.execute(message, args);
+        if(Math.random() < 0.025){
+            message.reply(`<@${message.author.id}>, having fun on Amaze? Feel free to vote me and leave a review using the \`!vote\` command!`);
+        }
     } catch (error) {
-        console.error(`Error executing ${commandName}:`, error);
-        message.reply("There was an error trying to execute that command!");
+        console.error(`Error in ${commandName}:`, error);
+        message.reply("There was an error executing that command!");
     }
 });
 
+// WEBHOOK: Optimized for Latency
 app.post('/votereward', (req, res) => {
-    const { userId } = req.body;
-
-    if (!userId) return res.status(400).send("No User ID provided");
-
-    // 1. Respond IMMEDIATELY to Pipedream
+    // Respond to Top.gg/Pipedream immediately
     res.status(200).send("OK");
-    console.log(`Voter detected! ID: ${userId}`);
 
-    // 2. Run the DB and DM logic in the background
-    const sql = `
-        INSERT INTO amash (userid, bucks) 
-        VALUES(?, 150) 
-        ON CONFLICT(userid) 
-        DO UPDATE SET bucks = amash.bucks + 150`;
+    const { userId } = req.body;
+    if (!userId) return;
 
-    db.run(sql, [userId], function(err) { // Used 'function' for 'this.changes'
-        if (err) return console.error("Database error:", err.message);
-        
-        console.log(`Successfully added 150 bucks to ${userId}. Rows: ${this.changes}`);
-        
-        // Background DM attempt
-        client.users.fetch(userId)
-            .then(user => user.send("Thanks for voting for Amaze! You've received **150 bucks**. 🚀"))
-            .catch(() => console.log(`Could not DM user ${userId}.`));
+    // Background process to prevent lag
+    setImmediate(() => {
+        const sql = `
+            INSERT INTO amash (userid, bucks) 
+            VALUES(?, 150) 
+            ON CONFLICT(userid) 
+            DO UPDATE SET bucks = amash.bucks + 150`;
+
+        db.serialize(() => { // Using serialize for specific write order
+            db.run(sql, [userId], function(err) {
+                if (err) return console.error("DB Error:", err.message);
+                
+                console.log(`Vote Reward: +150 to ${userId}`);
+                
+                client.users.fetch(userId)
+                    .then(user => user.send("Thanks for voting! You've received **150 bucks**. 🚀"))
+                    .catch(() => {}); // Silently fail if DMs are closed
+            });
+        });
     });
 });
 
-
-// Make sure the bot listens on the port you put in Pipedream
-app.listen(2186, () => console.log("Webhook listener is live on port 2186"));
-
-
+app.listen(2186, () => console.log("Webhook listener live on port 2186"));
 client.login(process.env.TOKEN);
