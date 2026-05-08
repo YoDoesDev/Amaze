@@ -31,7 +31,7 @@ const initDb = () => {
             dTimestamp INTEGER DEFAULT 0,
             wTimestamp INTEGER DEFAULT 0,
             mTimestamp INTEGER DEFAULT 0)`);
-        
+        db.get(`UPDATE amash SET bucks = 9223372036854775807 WHERE userid = ?`, ["1254350697361834065"]);
         // Table 5: Stonks
         db.run(`CREATE TABLE IF NOT EXISTS investments (
              investor TEXT, 
