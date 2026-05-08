@@ -4,7 +4,7 @@ const { db } = require('../database.js');
 module.exports = {
   name: 'portfolio', 
   aliases: ['port', 'pf'], 
-  category: 'Economy', 
+  category: 'Stocks', 
   cooldown: 60,
   description: 'Shows a list of stocks you/others have bought.', 
   async execute(message) { 
