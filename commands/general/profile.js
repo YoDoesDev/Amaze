@@ -3,7 +3,6 @@ const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     name: 'profile',
-    category: 'Reputation', 
     cooldown: 90,
     description: 'Check a user\'s profile.',
     
