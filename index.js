@@ -1,5 +1,6 @@
 // Automated Deploy Active: May 1, 2026.
-const { Client, Collection, GatewayIntentBits, ActivityType } = require('discord.js');
+
+const { Client, Collection, GatewayIntentBits, REST, Routes, ActivityType} = require('discord.js');
 const { initDb, db } = require('./database.js');
 const express = require('express');
 const app = express();
@@ -15,15 +16,19 @@ const client = new Client({
         GatewayIntentBits.DirectMessages
     ] 
 });
-
-// Note: Standard event is 'ready', not 'clientReady'
-client.once("ready", () => {
-    console.log(`>>> [BOT] Logged in as ${client.user.tag}. GLHF, devs.`);
+client.once("clientReady", () => {
+    console.log("Bot is ready. GLHF, devs.");
 
     client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers.`, { 
          type: ActivityType.Watching
     });
-});
+    
+    /* Other types we can use:
+       ActivityType.Watching   -> "Watching !help | ..."
+       ActivityType.Listening  -> "Listening to !help | ..."
+       ActivityType.Competing  -> "Competing in !help | ..."
+    */
+  });
 
 client.commands = new Collection();
 // Database initialized inside database.js is usually cleaner, 
