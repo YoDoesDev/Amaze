@@ -6,6 +6,7 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 const fs = require('fs');
+const { get } = require('http');
 require('dotenv').config();
 const client = new Client({ 
     intents: [
@@ -55,7 +56,7 @@ client.on('messageCreate', async (message) => {
         }
     }
     
-const prefix = '!';
+    const prefix = '!';
     if (!message.content.startsWith(prefix) || message.author.bot) return;
 
     const args = message.content.slice(prefix.length).trim().split(/ +/);
@@ -67,23 +68,36 @@ const prefix = '!';
     
     if (!command) return;
 
+    // I will be commenting everything because this is hard
+    // Note to self: set cooldown in SECONDS.
+
+    const cooldownKey = command.cooldownGroup || command.name;
+    const cooldownAmount = (command.cooldown || 5) * 1000;
+
+    // Make a new key-value pair which is ANOTHER MAP in cooldowns if it aint exist already
+    if (!cooldowns.has(cooldownKey)) {
+        cooldowns.set(cooldownKey, new Map());
+    }
     
+    // picking up a map from the cooldowns
+    const timestamp = cooldowns.get(cooldownKey);
     const now = Date.now();
-    const cooldownAmount = 5000; 
-    if (cooldowns.has(message.author.id)) {
-        const lastUsed = cooldowns.get(message.author.id);
-        const expirationTime = lastUsed + cooldownAmount;
 
-        if (now < expirationTime) {
-            const timeLeft = (expirationTime - now) / 1000;
+    // timestamp is in the format userID => time
 
-            return message.reply(`Slow down! Wait **${timeLeft.toFixed(1)}s** before using \`${commandName}\` again.`);
+    if (timestamp.has(message.author.id)) {
+        const timeWhenCooldownEnds = timestamp.get(message.author.id) + cooldownAmount;
+
+        if (now < timeWhenCooldownEnds) {
+            const timeLeft = ((timeWhenCooldownEnds - now) / 1000).toFixed(0);
+
+            return message.reply(
+                `Slow down! Wait **${timeLeft}s** before using a \`${cooldownKey}\` command again.`
+            );
         }
     }
 
-    cooldowns.set(message.author.id, now);
-
-    setTimeout(() => cooldowns.delete(message.author.id), cooldownAmount);
+    timestamp.set(message.author.id, now);
 
     try {
         await command.execute(message, args);

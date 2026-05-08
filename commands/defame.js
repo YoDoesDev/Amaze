@@ -3,12 +3,13 @@ const { db } = require('../database.js');
 module.exports = {
     name: 'defame',
     category: 'Reputation', 
+    cooldown: 60,
     description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>`\n\n<> = REQUIRED\n[] = OPTIONAL',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
         const now = Date.now();
-        const cooldownTime = 8 * 60 * 60 * 1000;
+
         if (!targetUser) return message.reply("Mention someone to defame them.");
         if (targetUser.id === authorId) return message.reply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
         if (targetUser.bot) return message.reply("Bots don't have reputations.");

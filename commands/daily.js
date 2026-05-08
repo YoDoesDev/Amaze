@@ -6,6 +6,7 @@ module.exports = {
   aliases: ['d'], 
   category: 'Economy', 
   description: 'Use this command to gain amash everyday. \n\nAlias: !', 
+  cooldown: 60,
   async execute(message){
     const embed = new EmbedBuilder()
       .setTitle("Amash collected!")

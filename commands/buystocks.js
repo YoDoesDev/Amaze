@@ -4,6 +4,8 @@ const { db } = require('../database.js');
 module.exports = {
   name: 'buystocks', 
   aliases: ['bs'], 
+  cooldownGroup: "stocks",
+  cooldown: 180,
   category: 'Economy', 
   description: 'Buy the stocks of a person to get profit from their reputation. \n\nSyntax: `!buystocks <@user> <no_of_stocks> \nAlias: !bs`', 
 

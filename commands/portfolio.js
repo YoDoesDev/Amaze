@@ -5,6 +5,7 @@ module.exports = {
   name: 'portfolio', 
   aliases: ['port', 'pf'], 
   category: 'Economy', 
+  cooldown: 60,
   description: 'Shows a list of stocks you/others have bought\n\nSyntax: `!portfolio [@user]`\n<> = REQUIRED [] = OPTIONAL\n\n Aliases: !port, !pf', 
   async execute(message){
     const target = message.mentions.users.first() || message.author;

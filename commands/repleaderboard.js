@@ -5,6 +5,7 @@ module.exports = {
   name: 'repleaderboard', 
   category: 'Reputation', 
   aliases: ['replb', 'rl'], 
+  cooldown: 60,
   description: 'Shows a leaderboard of members with highest reputation points. \n\nAliases: !replb, !rl',
   async execute(message){
     db.all(`SELECT *

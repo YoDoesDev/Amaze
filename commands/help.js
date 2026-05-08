@@ -3,6 +3,7 @@ const { EmbedBuilder } = require('discord.js');
 module.exports = {
     name: 'help',
     aliases: ['h'],
+    cooldown: 3,
     description: 'Displays all commands categorized or details of a specific command.',
     
     execute(message, args) {

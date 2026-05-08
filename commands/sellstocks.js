@@ -1,10 +1,13 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../database.js');
+const { cooldown } = require('./ping.js');
 
 module.exports = {
     name: 'sellstocks',
     category: 'Economy', 
     aliases: ['ss'],
+    cooldownGroup: "stocks",
+    cooldown: 180,
     description: 'Use this to sell your stocks you invested on a person \n\n Syntax: `!sellstocks <@user> <no_of_stocks>`\nAlias: !ss',
     
     async execute(message, args) {

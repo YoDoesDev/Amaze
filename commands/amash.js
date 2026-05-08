@@ -4,6 +4,7 @@ const { db } = require('../database.js');
 module.exports = {
   name: 'amash', 
   category: 'Economy', 
+  cooldown: 30,
   description: 'Use this command to gain amash everyday.', 
   async execute(message){
     const targetUser = message.mentions.users.first() || message.author

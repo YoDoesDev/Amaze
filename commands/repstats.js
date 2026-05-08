@@ -5,6 +5,7 @@ module.exports = {
     name: 'repstats',
     aliases: ['rs'], 
     category: 'Reputation', 
+    cooldown: 60,
     description: 'Check your/other\'s  reputation points\n\nSyntax: `!repstats [@user]`\n\n<> = REQUIRED\n [] = OPTIONAL\n Alias: !rs',
     async execute(message, args) {
         console.log(">>> [DEBUG] repstats command started");
