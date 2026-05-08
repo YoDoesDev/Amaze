@@ -6,7 +6,7 @@ module.exports = {
     aliases: ['bs'],
     cooldownGroup: "stocks",
     cooldown: 180,
-    category: 'Economy',
+    category: 'Stocks',
     description: 'Buy the stocks of a person to get profit from their reputation.',
 
     async execute(message, args) { 
