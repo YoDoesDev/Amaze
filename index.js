@@ -21,7 +21,7 @@ client.once("clientReady", () => {
     console.log("Bot is ready. GLHF, devs.");
 
     client.user.setActivity('!help | Circulating amash', { 
-        type: ActivityType.Playing 
+         
     });
     
     /* Other types we can use:
