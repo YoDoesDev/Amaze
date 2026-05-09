@@ -51,7 +51,7 @@ module.exports = {
       }catch(err){
         return message.reply("An error occurred while transferring amash.");
       }
-      setTimeout(() = {
+      setTimeout(() => {
       msg.edit(`You have won ${amt * 2} ${emojis.amash}!`);}, 1500);
       return;
     } else{
