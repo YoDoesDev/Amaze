@@ -6,10 +6,10 @@ module.exports = {
   aliases: ["cf"], 
   category: "Gambling", 
   cooldown: 20,
-  description: "Choose your call and gamble money on a coin!\n\nSyntax: `!coinflip [h/t] <amash>\n\n[] = OPTIONAL\n<> = REQUIRED`", 
+  description: "Choose your call and gamble money on a coin!\n\nSyntax: `!coinflip <amash >[h/t]\n\n[] = OPTIONAL\n<> = REQUIRED`", 
   async execute(message, args){
-    let call = args[0] || "h";
-    const amt = parseInt(args[1]);
+    let call = args[1] || "h";
+    const amt = parseInt(args[0]);
     let stones, monie;
     const validCalls = ["h", "t", "heads", "tails"];
     if(!validCalls.includes(call.toLowerCase())){
@@ -51,14 +51,17 @@ module.exports = {
       }catch(err){
         return message.reply("An error occurred while transferring amash.");
       }
-      return message.channel.send(`You have won ${amt * 2} ${emojis.amash}!`);
+      setTimeout(() = {
+      msg.edit(`You have won ${amt * 2} ${emojis.amash}!`);}, 1500);
+      return;
     } else{
       try{
         db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, message.author.id);
       }catch(err){
         return message.reply("An error occurred while transferring amash.");
       }
-      return message.channel.send(`You have lost ${amt} ${emojis.amash}.`);
+      setTimeout(() => {
+      msg.edit(`You have lost ${amt} ${emojis.amash}.`);}, 1500);
     }
   }
 }
