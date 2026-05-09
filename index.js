@@ -16,7 +16,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const { getPrefix } = require('./prefixManager');
+const { getPrefix } = require('./prefixManager.js');
 
 app.use(express.json());
 
