@@ -51,7 +51,7 @@ for (const folder of commandFolders) {
                 // If you forget to define one, it defaults to the folder name
                 client.commands.set(command.name, {
                     ...command,
-                    category: command.category || "General";
+                    category: command.category || "General"
                 });
             }
         }
