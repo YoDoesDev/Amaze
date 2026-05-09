@@ -12,7 +12,7 @@ console.log('>>> [DATABASE] Connected to amaze.sqlite (Better-SQLite3).');
 const initDb = () => {
     // 2. Set Performance Settings
     // These replace your old db.run("PRAGMA...") calls
-    db.pragma('journal_mode = WAL');
+    db.pragma('journal_mode = DELETE');
     db.pragma('synchronous = OFF');
     db.pragma('temp_store = MEMORY');
 
