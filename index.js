@@ -34,6 +34,8 @@ initDb();
 
 // --- COMMAND REGISTRATION (SUBFOLDER SUPPORT) ---
 const foldersPath = path.join(__dirname, 'commands');
+const commandFolders = fs.readdirSync(foldersPath);
+
 for (const folder of commandFolders) {
     const folderPath = path.join(foldersPath, folder);
     
@@ -43,17 +45,27 @@ for (const folder of commandFolders) {
             const filePath = path.join(folderPath, file);
             const command = require(filePath);
             
-            if ('name' in command && 'execute' in command) {
-                command.category = command.category || 'General'; 
-                client.commands.set(command.name, command);
+            // Check if the file is a valid command
+            if (command.name && command.execute) {
+                // Takes category directly from module.exports in the file
+                // If you forget to define one, it defaults to the folder name
+                client.commands.set(command.name, {
+                    ...command,
+                    category: command.category || folder 
+                });
             }
         }
     } else if (folder.endsWith('.js')) {
         const command = require(path.join(foldersPath, folder));
-        command.category = command.category || 'General';
-        client.commands.set(command.name, command);
+        if (command.name && command.execute) {
+            client.commands.set(command.name, {
+                ...command,
+                category: command.category || 'General'
+            });
+        }
     }
 }
+
 
 console.log(`Amaze v1.1.0: Registered ${client.commands.size} commands across categories.`);
 
