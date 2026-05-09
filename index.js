@@ -34,8 +34,6 @@ initDb();
 
 // --- COMMAND REGISTRATION (SUBFOLDER SUPPORT) ---
 const foldersPath = path.join(__dirname, 'commands');
-const commandFolders = fs.readdirSync(foldersPath);
-
 for (const folder of commandFolders) {
     const folderPath = path.join(foldersPath, folder);
     
@@ -46,15 +44,17 @@ for (const folder of commandFolders) {
             const command = require(filePath);
             
             if ('name' in command && 'execute' in command) {
-                command.category = folder; 
+                command.category = command.category || 'General'; 
                 client.commands.set(command.name, command);
             }
         }
     } else if (folder.endsWith('.js')) {
         const command = require(path.join(foldersPath, folder));
+        command.category = command.category || 'General';
         client.commands.set(command.name, command);
     }
 }
+
 console.log(`Amaze v1.1.0: Registered ${client.commands.size} commands across categories.`);
 
 const cooldowns = new Map();
