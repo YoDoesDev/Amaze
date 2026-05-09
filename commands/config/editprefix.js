@@ -1,5 +1,5 @@
 const { db } = require('../../database.js');
-const { setPrefix } = require('../../prefixManager');
+const { setPrefix } = require('../../prefixManager.js');
 
 module.exports = {
     name: 'editprefix',
