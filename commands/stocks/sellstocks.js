@@ -1,9 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../database.js');
+const { db } = require('../../database.js');
 
 module.exports = {
     name: 'sellstocks',
-    category: 'Economy', 
+    category: 'Stocks', 
     aliases: ['ss'],
     cooldownGroup: "stocks",
     cooldown: 180,
