@@ -1,13 +1,22 @@
 // Automated Deploy Active: May 1, 2026.
 // Amaze Bot - Optimized for Performance and Scalability
 
-const { Client, Collection, GatewayIntentBits, ActivityType } = require('discord.js');
+const { 
+    Client,
+    Collection,
+    GatewayIntentBits,
+    ActivityType,
+    Options
+} = require('discord.js');
+
 const { initDb, db } = require('./database.js');
 const express = require('express');
 const app = express();
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+
+const { getPrefix } = require('./prefixManager');
 
 app.use(express.json());
 
@@ -17,7 +26,17 @@ const client = new Client({
         GatewayIntentBits.GuildMessages, 
         GatewayIntentBits.MessageContent, 
         GatewayIntentBits.DirectMessages
-    ] 
+    ],
+
+    makeCache: Options.cacheWithLimits({
+        MessageManager: 10,
+        PresenceManager: 0,
+        ReactionManager: 0,
+        GuildMemberManager: 50,
+        UserManager: 50,
+        ThreadManager: 0,
+        ThreadMemberManager: 0
+    })
 });
 
 // Keeping your 'clientReady' as per latest updates
@@ -30,6 +49,7 @@ client.once("clientReady", () => {
 });
 
 client.commands = new Collection();
+client.aliases = new Map();
 initDb();
 
 // --- COMMAND REGISTRATION (SUBFOLDER SUPPORT) ---
@@ -40,7 +60,11 @@ for (const folder of commandFolders) {
     const folderPath = path.join(foldersPath, folder);
     
     if (fs.lstatSync(folderPath).isDirectory()) {
-        const commandFiles = fs.readdirSync(folderPath).filter(file => file.endsWith('.js'));
+
+        const commandFiles = fs
+            .readdirSync(folderPath)
+            .filter(file => file.endsWith('.js'));
+
         for (const file of commandFiles) {
             const filePath = path.join(folderPath, file);
             const command = require(filePath);
@@ -53,15 +77,31 @@ for (const folder of commandFolders) {
                     ...command,
                     category: command.category || "General"
                 });
+
+                // Register Aliases in a Map, because it's apparently O(1) lookup.
+                if (command.aliases) {
+                    for (const alias of command.aliases) {
+                        client.aliases.set(alias, command.name);
+                    }
+                }
             }
         }
     } else if (folder.endsWith('.js')) {
-        const command = require(path.join(foldersPath, folder));
+
+        const filePath = path.join(foldersPath, folder);
+        const command = require(filePath);
         if (command.name && command.execute) {
             client.commands.set(command.name, {
                 ...command,
                 category: command.category || 'General'
             });
+
+            if (command.aliases) {
+                for (const alias of command.aliases) {
+                    client.aliases.set(alias, command.name);
+                }
+            }
+
         }
     }
 }
@@ -75,8 +115,8 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
 
     try {
-        const row = db.prepare("SELECT prefix FROM guild_settings WHERE guildid = ?").get(message.guild.id);
-        const prefix = row?.prefix || "!";
+
+        const prefix = getPrefix(message.guild.id);
 
         if (!message.content.startsWith(prefix)) {
             const content = message.content.toLowerCase();
@@ -98,8 +138,10 @@ client.on('messageCreate', async (message) => {
         const args = message.content.slice(prefix.length).trim().split(/ +/);
         const commandName = args.shift().toLowerCase();
 
-        const command = client.commands.get(commandName) ||
-                        client.commands.find(cmd => cmd.aliases && cmd.aliases.includes(commandName));
+        const trueCommandName =
+        client.aliases.get(commandName) || commandName;
+
+        const command = client.commands.get(trueCommandName);
 
         if (!command) return;
 
@@ -123,6 +165,11 @@ client.on('messageCreate', async (message) => {
         }
 
         timestamp.set(message.author.id, now);
+
+        setTimeout(() => { 
+            timestamp.delete(message.author.id); 
+        }, cooldownAmount);
+
         await command.execute(message, args);
 
         if (Math.random() < 0.025) {
