@@ -1,13 +1,22 @@
 // Automated Deploy Active: May 1, 2026.
 // Amaze Bot - Optimized for Performance and Scalability
 
-const { Client, Collection, GatewayIntentBits, ActivityType } = require('discord.js');
+const { 
+    Client,
+    Collection,
+    GatewayIntentBits,
+    ActivityType,
+    Options
+} = require('discord.js');
+
 const { initDb, db } = require('./database.js');
 const express = require('express');
 const app = express();
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+
+const { getPrefix } = require('./prefixManager');
 
 app.use(express.json());
 
@@ -17,7 +26,17 @@ const client = new Client({
         GatewayIntentBits.GuildMessages, 
         GatewayIntentBits.MessageContent, 
         GatewayIntentBits.DirectMessages
-    ] 
+    ],
+
+    makeCache: Options.cacheWithLimits({
+        MessageManager: 10,
+        PresenceManager: 0,
+        ReactionManager: 0,
+        GuildMemberManager: 50,
+        UserManager: 50,
+        ThreadManager: 0,
+        ThreadMemberManager: 0
+    })
 });
 
 // Keeping your 'clientReady' as per latest updates
@@ -75,8 +94,8 @@ client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
 
     try {
-        const row = db.prepare("SELECT prefix FROM guild_settings WHERE guildid = ?").get(message.guild.id);
-        const prefix = row?.prefix || "!";
+
+        const prefix = getPrefix(message.guild.id);
 
         if (!message.content.startsWith(prefix)) {
             const content = message.content.toLowerCase();
