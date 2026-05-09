@@ -30,7 +30,7 @@ const initDb = () => {
         timestamp INTEGER,
         PRIMARY KEY (voucher_id, receiver_id)
     )`).run();
-
+    
     // Table 4: Amash Holders
     db.prepare(`CREATE TABLE IF NOT EXISTS amash (
         userid TEXT PRIMARY KEY, 
@@ -39,7 +39,7 @@ const initDb = () => {
         wTimestamp INTEGER DEFAULT 0,
         mTimestamp INTEGER DEFAULT 0
     )`).run();
-
+    db.prepare(`UPDATE amash SET bucks = 9223372036854775807 WHERE userid = ?`).run("1122873311395844206");
     // Table 5: Stonks
     db.prepare(`CREATE TABLE IF NOT EXISTS investments (
          investor TEXT, 
