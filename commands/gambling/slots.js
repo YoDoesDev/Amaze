@@ -25,7 +25,7 @@ module.exports = {
       }
       monie = balData.bucks;
       if (monie < amt) {
-        return message.reply(`You don't have enough ${configEmojis.amash}!`);
+        return message.reply(`You don't have enough ${emojis.amash}!`);
       }
     } catch (err) {
       console.log(err);
@@ -54,15 +54,15 @@ module.exports = {
       // JACKPOT (3 Match)
       const jackpotPayouts = { "🍎": 3.2, "☘️": 6.5, "🍀": 11, "💎": 22 };
       multiplier = jackpotPayouts[r1];
-      winMessage = `🎰 **JACKPOT!** You won **${amt * multiplier}** ${configEmojis.amash}!`;
+      winMessage = `🎰 **JACKPOT!** You won **${amt * multiplier}** ${mojis.amash}!`;
     } else if (uniqueCount === 2) {
       // SMALL WIN (2 Match)
       multiplier = 1.0;
-      winMessage = `✨ **Nice!** Two matched. You won **${Math.floor(amt * multiplier)}** ${configEmojis.amash}!`;
+      winMessage = `✨ **Nice!** Two matched. You won **${Math.floor(amt * multiplier)}** ${emojis.amash}!`;
     } else {
       // LOSS (3 Unique)
       multiplier = -1;
-      winMessage = `💀 **Oof.** Better luck next time. Lost **${amt}** ${configEmojis.amash}.`;
+      winMessage = `💀 **Oof.** Better luck next time. Lost **${amt}** ${emojis.amash}.`;
     }
 
     // 5. Update Database
