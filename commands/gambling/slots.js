@@ -1,6 +1,7 @@
 const { db } = require("../../database.js");
 const { emojis } = require("../../config.js");
 
+// EV 0.85.
 module.exports = {
   name: "slots",
   aliases: ["s"],
@@ -51,12 +52,12 @@ module.exports = {
 
     if (uniqueCount === 1) {
       // JACKPOT (3 Match)
-      const jackpotPayouts = { "🍎": 4, "☘️": 7, "🍀": 12, "💎": 25 };
+      const jackpotPayouts = { "🍎": 3.2, "☘️": 6.5, "🍀": 11, "💎": 22 };
       multiplier = jackpotPayouts[r1];
       winMessage = `🎰 **JACKPOT!** You won **${amt * multiplier}** ${configEmojis.amash}!`;
     } else if (uniqueCount === 2) {
       // SMALL WIN (2 Match)
-      multiplier = 1.5;
+      multiplier = 1.0;
       winMessage = `✨ **Nice!** Two matched. You won **${Math.floor(amt * multiplier)}** ${configEmojis.amash}!`;
     } else {
       // LOSS (3 Unique)
