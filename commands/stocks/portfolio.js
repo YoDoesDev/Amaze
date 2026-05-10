@@ -5,7 +5,7 @@ module.exports = {
   name: 'portfolio', 
   aliases: ['port', 'pf'], 
   category: 'Stocks', 
-  cooldown: 60,
+  cooldown: 25,
   description: 'Shows a list of stocks you/others have bought.', 
   async execute(message) { 
     const target = message.mentions.users.first() || message.author;
