@@ -1,5 +1,5 @@
 const { db } = require("../../database.js");
-const { emojis: configEmojis } = require("../../config.js");
+const { emojis } = require("../../config.js");
 
 module.exports = {
   name: "slots",
