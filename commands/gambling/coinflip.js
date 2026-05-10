@@ -70,34 +70,3 @@ module.exports = {
     }, 2000); // 2-second delay for suspense
   }
 };
-      return console.log(err);
-    }
-    call = call.startsWith("h")? "heads":"tails";
-    message.channel.send(`${emojis.cf} ${message.author.username} bets ${amt} and chooses ${call}`);
-    
-    if(stones > 20){
-      stones = 20;
-    }
-    
-    if(Math.random() < (0.5 + 0.0125 * stones)){
-      
-      
-      try{
-        db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(amt, message.author.id);
-      }catch(err){
-        return message.reply("An error occurred while transferring amash.");
-      }
-      setTimeout(() => {
-      msg.edit(`You have won ${amt * 2} ${emojis.amash}!`);}, 1500);
-      return;
-    } else{
-      try{
-        db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, message.author.id);
-      }catch(err){
-        return message.reply("An error occurred while transferring amash.");
-      }
-      setTimeout(() => {
-      msg.edit(`You have lost ${amt} ${emojis.amash}.`);}, 1500);
-    }
-  }
-}
