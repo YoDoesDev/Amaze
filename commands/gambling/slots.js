@@ -6,7 +6,7 @@ module.exports = {
   name: "slots",
   aliases: ["s"],
   category: "Gambling",
-  cooldown: 20,
+  cooldown: 15,
   description: "Bet some money to win prizes!\n\nSyntax: `!slots <amash>`\n\n<> = REQUIRED",
   async execute(message, args) {
     const amt = parseInt(args[0]);
@@ -54,7 +54,7 @@ module.exports = {
       // JACKPOT (3 Match)
       const jackpotPayouts = { "🍎": 3.2, "☘️": 6.5, "🍀": 11, "💎": 22 };
       multiplier = jackpotPayouts[r1];
-      winMessage = `🎰 **JACKPOT!** You won **${amt * multiplier}** ${mojis.amash}!`;
+      winMessage = `🎰 **JACKPOT!** You won **${amt * multiplier}** ${emojis.amash}!`;
     } else if (uniqueCount === 2) {
       // SMALL WIN (2 Match)
       multiplier = 1.0;
