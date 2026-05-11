@@ -117,11 +117,7 @@ const cooldowns = new Map();
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
     
-console.log(`------------------------------
-👤 User: ${message.author.tag}
-⚙️ Cmd: ${commandName}
-🏠 Guild: ${message.guild.name}
-------------------------------`);
+
 
     try {
 
@@ -188,7 +184,14 @@ console.log(`------------------------------
     } catch (error) {
         console.error(`>>> [ERROR] Command Execution Fail: ${error.message}`);
         message.reply("There was an error executing that command!");
-    }
+    }   
+    
+    console.log(`------------------------------
+👤 User: ${message.author.tag}
+⚙️ Cmd: ${commandName}
+🏠 Guild: ${message.guild.name}
+------------------------------`);
+    
 });
 
 app.post('/votereward', (req, res) => {
