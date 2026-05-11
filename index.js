@@ -116,6 +116,12 @@ const cooldowns = new Map();
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.guild) return;
+    
+console.log(`------------------------------
+👤 User: ${message.author.tag}
+⚙️ Cmd: ${commandName}
+🏠 Guild: ${message.guild.name}
+------------------------------`);
 
     try {
 
