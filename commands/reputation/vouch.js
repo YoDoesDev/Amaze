@@ -3,7 +3,7 @@ const { db } = require('../../database.js');
 module.exports = {
     name: 'vouch',
     category: 'Reputation', 
-    cooldown: 60,
+    cooldown: 10,
     description: 'Vouch for a user with a 8-hour cooldown per person.\n\nSyntax: `!vouch <@user>`',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
