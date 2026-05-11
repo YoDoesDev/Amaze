@@ -40,22 +40,35 @@ module.exports = {
       "💎"                    // mythic
     ];
 
-    const r1 = slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
-    const r2 = slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
-    const r3 = slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
+    const jackpotPayouts = { 
+      "🍎": 3.2, 
+      "☘️": 6.5, 
+      "🍀": 11, 
+      "💎": 22 
+    };
+
+    const roll = () => {
+      return slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
+    };
+
+    const r1 = roll();
+    const r2 = roll();
+    const r3 = roll();
     const result = [r1, r2, r3];
 
+    const isMatch = (a, b, c) => a === b && b === c;
+    const isTwoMatch = (a, b, c) =>
+      a === b || b === c || a === c;
+
     // 4. Calculate Payout using a Set
-    const uniqueCount = new Set(result).size;
     let multiplier = 0;
     let winMessage = "";
 
-    if (uniqueCount === 1) {
+    if (isMatch(r1, r2, r3)) {
       // JACKPOT (3 Match)
-      const jackpotPayouts = { "🍎": 3.2, "☘️": 6.5, "🍀": 11, "💎": 22 };
       multiplier = jackpotPayouts[r1];
       winMessage = `🎰 **JACKPOT!** You won **${amt * multiplier}** ${emojis.amash}!`;
-    } else if (uniqueCount === 2) {
+    } else if (isTwoMatch(r1, r2, r3)) {
       // SMALL WIN (2 Match)
       multiplier = 1.0;
       winMessage = `✨ **Nice!** Two matched. You won **${Math.floor(amt * multiplier)}** ${emojis.amash}!`;
