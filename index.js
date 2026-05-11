@@ -41,6 +41,9 @@ const client = new Client({
 
 // Keeping your 'clientReady' as per latest updates
 client.once("clientReady", () => {
+    console.log(`Currently in ${client.guilds.cache.size} servers:`);
+client.guilds.cache.forEach(guild => console.log(` - ${guild.name} (${guild.memberCount} members)`));
+    
     console.log("Bot is ready. GLHF, devs.");
 
     client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers.`, { 
