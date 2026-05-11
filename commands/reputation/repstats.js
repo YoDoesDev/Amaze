@@ -5,7 +5,7 @@ module.exports = {
     name: 'repstats',
     aliases: ['rs'], 
     category: 'Reputation', 
-    cooldown: 60,
+    cooldown: 10,
     description: 'Check your/other\'s reputation points\n\nSyntax: `!repstats [@user]`',
     async execute(message, args) {
         try {
