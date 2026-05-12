@@ -1,4 +1,4 @@
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
