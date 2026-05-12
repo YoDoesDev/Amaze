@@ -32,7 +32,8 @@ const client = new Client({
         GatewayIntentBits.Guilds, 
         GatewayIntentBits.GuildMessages, 
         GatewayIntentBits.MessageContent, 
-        GatewayIntentBits.DirectMessages
+        GatewayIntentBits.DirectMessages, 
+        GatewayIntentBits.GuildMembers
     ],
     // Extreme memory optimization for 256MB RAM
     makeCache: Options.cacheWithLimits({
