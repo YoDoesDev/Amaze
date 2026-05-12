@@ -68,6 +68,29 @@ const initDb = () => {
         guildid TEXT PRIMARY KEY,
         prefix TEXT DEFAULT '!'
     )`).run();
+// starts
+// 1. Rename the current table
+db.prepare(`ALTER TABLE reputation RENAME TO rep_old`).run();
+
+// 2. Create the new table with the Composite Key (Fixed parenthesis)
+db.prepare(`
+  CREATE TABLE reputation (
+    userid TEXT NOT NULL,
+    guildid TEXT NOT NULL,
+    points INTEGER DEFAULT 0,
+    PRIMARY KEY (userid, guildid)
+  )
+`).run();
+
+// 3. Migrate the data (Using 'GLOBAL' as a placeholder)
+db.prepare(`
+  INSERT INTO reputation (userid, guildid, points)
+  SELECT userid, 'Legend', points FROM rep_old
+`).run();
+
+// 4. Drop the correct old table
+db.prepare(`DROP TABLE rep_old`).run();
+ // ends
 
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
