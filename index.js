@@ -12,9 +12,10 @@ const {
 const express = require('express');
 require('dotenv').config();
 
-// --- 2. DATABASE & MANAGERS ---
-const { initDb, db } = require('./database.js');
-const { getPrefix } = require('./prefixManager.js');
+// --- DATABASE & MANAGERS ---
+const { initDb, db } = require('./utils/database.js');
+const { getPrefix } = require('./utils/prefixManager.js');
+
 
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands } = require('./utils/commandLoader.js');
