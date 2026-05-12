@@ -60,7 +60,7 @@ client.once("clientReady", () => {
     // Launch Webhooks and Top.gg Sync
     setupIntegrations(client, app, db);
 
-    client.user.setActivity(`!help | Circulating Amash`, { 
+    client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers`, { 
          type: ActivityType.Watching
     });
 });
