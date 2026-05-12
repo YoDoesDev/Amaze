@@ -94,7 +94,7 @@ client.on('messageCreate', async (message) => {
         await command.execute(message, args);
 
         // Rare chance for a vote reminder (Social Proof)
-        if (Math.random() < 0.025) {
+        if (Math.random() < 0.07) {
             message.reply(`Having fun? Use \`${prefix}vote\` to support Amaze!`);
         }
     } catch (error) {
