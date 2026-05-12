@@ -41,7 +41,6 @@ const client = new Client({
 
 const { AutoPoster } = require('topgg-autoposter');
 
-// Replace 'TOPGG_TOKEN' with the token from your bot's "Webhooks" or "API" tab on Top.gg
 const ap = AutoPoster('PROCESS.env.TOPGG_TOKEN', client);
 
 ap.on('posted', () => {
