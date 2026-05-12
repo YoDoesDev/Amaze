@@ -69,33 +69,6 @@ const initDb = () => {
         prefix TEXT DEFAULT '!'
     )`).run();
 
-const migrationScript = `
-  -- 1. Move the messy table out of the way
-  ALTER TABLE reputation RENAME TO rep_temp;
-
-  -- 2. Create the clean global table
-  CREATE TABLE reputation (
-      userid TEXT PRIMARY KEY,
-      points INTEGER DEFAULT 0
-  );
-
-  -- 3. Move only unique, real users back (filtering out the Legend/Global duplicates)
-  INSERT INTO reputation (userid, points)
-  SELECT userid, MAX(points) 
-  FROM rep_temp 
-  WHERE userid IS NOT NULL 
-  GROUP BY userid;
-
-  -- 4. Delete the temp table
-  DROP TABLE rep_temp;
-`;
-
-// Run the whole thing at once
-db.exec(migrationScript);
-console.log("Database successfully reverted to Global Economy!");
-
-
-
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
 
