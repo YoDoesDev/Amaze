@@ -1,11 +1,13 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-
 // 1. Connect to the database
 // This replaces the old new sqlite3.Database() with a synchronous connection
-const db = new Database(path.join(__dirname, 'amaze.sqlite'), { 
-    // verbose: console.log // Optional: logs every query to the console
-});
+const path = require('path');
+const Database = require('better-sqlite3'); // Or your specific sqlite package
+
+// We use '..' to go out of the 'utils' folder and find the file in the root
+const db = new Database(path.join(__dirname, '..', 'amaze.sqlite'), {});
+
+module.exports = { db };
+
 
 console.log('>>> [DATABASE] Connected to amaze.sqlite (Better-SQLite3).');
 
@@ -70,4 +72,4 @@ const initDb = () => {
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
 
-module.exports = { db, initDb };
+module.exports = { db, initDinitD
