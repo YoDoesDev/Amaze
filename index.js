@@ -68,7 +68,7 @@ client.once("clientReady", () => {
 // --- 6. MESSAGE HANDLER ---
 client.on('messageCreate', async (message) => {
     // Basic Gates
-    if (message.author.bot || !message.guild) return;
+    if (message.author.bot) return;
     
     const prefix = getPrefix(message.guild.id);
 
