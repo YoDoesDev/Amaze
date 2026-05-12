@@ -18,7 +18,7 @@ const { getPrefix } = require('./utils/prefixManager.js');
 
 
 // --- 3. CUSTOM UTILITIES ---
-const { loadCommands } = require('./utils/commandLoader.js');
+// const { loadCommands } = require('./utils/commandLoader.js');
 const { handleCooldown } = require('./utils/cooldowns.js');
 const { autoMsg } = require('./utils/autoReplies.js');
 const { setupIntegrations } = require('./utils/integrations.js');
