@@ -41,7 +41,7 @@ const client = new Client({
 
 const { AutoPoster } = require('topgg-autoposter');
 
-const ap = AutoPoster('PROCESS.env.TOPGG_TOKEN', client);
+const ap = AutoPoster('process.env.TOPGG_TOKEN', client);
 
 ap.on('posted', () => {
   console.log('Successfully posted stats to Top.gg!');
