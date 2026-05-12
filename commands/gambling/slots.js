@@ -1,5 +1,5 @@
-const { db } = require("../../database.js");
-const { emojis } = require("../../config.js");
+const { db } = require("../../utils/database.js");
+const { emojis } = require("../../utils/config.js");
 
 // EV 0.85.
 module.exports = {
