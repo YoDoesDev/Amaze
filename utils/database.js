@@ -68,13 +68,16 @@ const initDb = () => {
         guildid TEXT PRIMARY KEY,
         prefix TEXT DEFAULT '!'
     )`).run();
+
 // starts
 
-// 3. Migrate the data (Using 'GLOBAL' as a placeholder)
 db.prepare(`
   INSERT INTO reputation (userid, guildid, points)
-  SELECT user_id, 'Legend', points FROM rep_old
+  SELECT user_id, 'Legend', points 
+  FROM rep_old 
+  WHERE user_id IS NOT NULL
 `).run();
+
 
 // 4. Drop the correct old table
 db.prepare(`DROP TABLE rep_old`).run();
