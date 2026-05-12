@@ -8,6 +8,7 @@ module.exports = {
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
+        const guildId = message.guild.id; // Get the current server ID
         const now = Date.now();
         const cooldownTime = 8 * 60 * 60 * 1000;
 
@@ -16,7 +17,8 @@ module.exports = {
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
         try {
-            // 1. Fetch History and Doubler Status
+            // 1. Fetch History, Doubler Status, and Current Rep
+            // Note: vouch_history usually stays global, but reputation is now per-guild
             const row = db.prepare(`
                 SELECT 
                     (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
@@ -35,24 +37,24 @@ module.exports = {
             const isDoubled = row?.vouch_doubler && now < row.vouch_doubler;
             const multiplier = isDoubled ? 2 : 1;
 
-            // 4. Atomic Execution (Sequential)
-            // Update history
+            // 4. Atomic Execution
+            // Update history (Global cooldown across all servers)
             db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
 
-            // Ensure reputation row exists and Update
-            db.prepare(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points + ? WHERE user_id = ?`).run(multiplier, targetUser.id);
+            // Ensure reputation row exists for THIS server and Update (Using new Composite Key)
+            db.prepare(`INSERT OR IGNORE INTO reputation (userid, guildid, points) VALUES (?, ?, 0)`).run(targetUser.id, guildId);
+            db.prepare(`UPDATE reputation SET points = points + ? WHERE userid = ? AND guildid = ?`).run(multiplier, targetUser.id, guildId);
 
             // Update Investor Profits (Multiplied)
             const profitGain = 5 * multiplier;
             db.prepare(`UPDATE investments SET profit = profit + (stocks * ?) WHERE invested = ?`).run(profitGain, targetUser.id);
 
-            // 5. Fetch and Respond
-            const repRow = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
-            
-            let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points.`;
+            // 5. Fetch updated points for the response
+            const repRow = db.prepare(`SELECT points FROM reputation WHERE userid = ? AND guildid = ?`).get(targetUser.id, guildId);
+
+            let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points in this server.`;
             if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
-            
+
             await message.channel.send(msg);
 
         } catch (err) {
