@@ -69,19 +69,6 @@ const initDb = () => {
         prefix TEXT DEFAULT '!'
     )`).run();
 
-// starts
-
-db.prepare(`
-  INSERT INTO reputation (userid, guildid, points)
-  SELECT user_id, 'Legend', points 
-  FROM rep_old 
-  WHERE user_id IS NOT NULL
-`).run();
-
-
-// 4. Drop the correct old table
-db.prepare(`DROP TABLE rep_old`).run();
- // ends
 
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
