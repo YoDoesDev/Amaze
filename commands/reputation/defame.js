@@ -8,7 +8,6 @@ module.exports = {
     async execute(message, args) { 
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
-        const guildId = message.guild.id; // Target specific server rep
         const now = Date.now();
         const cooldownTime = 8 * 60 * 60 * 1000; // 8 Hours in ms
 
@@ -17,7 +16,7 @@ module.exports = {
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
         try {
-            // 1. Fetch logic variables (Inventory is usually global, but history check remains)
+            // 1. Fetch all logic variables in one go
             const row = db.prepare(`
                 SELECT 
                     (SELECT pr_tp FROM inventory WHERE userid = ?) as target_shield,
@@ -40,19 +39,19 @@ module.exports = {
 
             const multiplier = (row?.author_doubler && now < row.author_doubler) ? 2 : 1;
 
-            // 4. Atomic Execution
-            // Lock the cooldown (Global)
+            // 4. Atomic Execution (Sequential, no serialize needed)
+            // Lock the cooldown first
             db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
 
-            // Update Reputation (Server-Specific)
-            db.prepare(`INSERT OR IGNORE INTO reputation (userid, guildid, points) VALUES (?, ?, 0)`).run(targetUser.id, guildId);
-            db.prepare(`UPDATE reputation SET points = points - ? WHERE userid = ? AND guildid = ?`).run(multiplier, targetUser.id, guildId);
+            // Update Reputation
+            db.prepare(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`).run(targetUser.id);
+            db.prepare(`UPDATE reputation SET points = points - ? WHERE user_id = ?`).run(multiplier, targetUser.id);
 
-            // Impact investors (Stock Market crash logic)
+            // Impact investors (The "Stock Market" crash logic)
             db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
 
-            // 5. Fetch final points for the response (Server-Specific)
-            const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ? AND guildid = ?`).get(targetUser.id, guildId);
+            // 5. Fetch final points for the response
+            const finalRep = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
 
             message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
 
