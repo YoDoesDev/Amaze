@@ -72,4 +72,4 @@ const initDb = () => {
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
 
-module.exports = { db, initDinitD
+module.exports = { db, initDb };
