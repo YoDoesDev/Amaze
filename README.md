@@ -1,7 +1,7 @@
 # 🌌 Amaze (v1.0.1)
 > **Where Reputation is Currency.**
 
-Amaze is a sophisticated Discord ecosystem that bridges the gap between social trust and financial growth. By turning "vouches" into market value, Amaze creates a living economy driven by human interaction.
+Amaze is a sophisticated Discord ecosystem that bridges the gap between social trust and financial growth. By turning "vouches" into market value, Amaze creates a living economy driven by human interaction. 
 
 ---
 
