@@ -1,11 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../database.js'); 
+const { db } = require('../../utils/database.js'); 
 
 module.exports = {
     name: 'repstats',
     aliases: ['rs'], 
     category: 'Reputation', 
-    cooldown: 60,
+    cooldown: 10,
     description: 'Check your/other\'s reputation points\n\nSyntax: `!repstats [@user]`',
     async execute(message, args) {
         try {

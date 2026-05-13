@@ -1,9 +1,9 @@
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
 
 module.exports = {
     name: 'defame',
     category: 'Reputation', 
-    cooldown: 60,
+    cooldown: 10,
     description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>`',
     async execute(message, args) { 
         const targetUser = message.mentions.users.first();
@@ -42,11 +42,11 @@ module.exports = {
             // 4. Atomic Execution (Sequential, no serialize needed)
             // Lock the cooldown first
             db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
-            
+
             // Update Reputation
             db.prepare(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`).run(targetUser.id);
             db.prepare(`UPDATE reputation SET points = points - ? WHERE user_id = ?`).run(multiplier, targetUser.id);
-            
+
             // Impact investors (The "Stock Market" crash logic)
             db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
 

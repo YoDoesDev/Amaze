@@ -1,11 +1,11 @@
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
 const { EmbedBuilder } = require('discord.js');
 
 module.exports = {
     name: 'profile',
     cooldown: 90,
     description: 'Check a user\'s profile.',
-    
+    category: 'Reputation', 
     async execute(message, args) {
         const user = message.mentions.users.first() || message.author;
 

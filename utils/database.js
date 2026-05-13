@@ -1,18 +1,20 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-
 // 1. Connect to the database
 // This replaces the old new sqlite3.Database() with a synchronous connection
-const db = new Database(path.join(__dirname, 'amaze.sqlite'), { 
-    // verbose: console.log // Optional: logs every query to the console
-});
+const path = require('path');
+const Database = require('better-sqlite3'); // Or your specific sqlite package
+
+// We use '..' to go out of the 'utils' folder and find the file in the root
+const db = new Database(path.join(__dirname, '..', 'amaze.sqlite'), {});
+
+module.exports = { db };
+
 
 console.log('>>> [DATABASE] Connected to amaze.sqlite (Better-SQLite3).');
 
 const initDb = () => {
     // 2. Set Performance Settings
     // These replace your old db.run("PRAGMA...") calls
-    db.pragma('journal_mode = WAL');
+    db.pragma('journal_mode = DELETE');
     db.pragma('synchronous = OFF');
     db.pragma('temp_store = MEMORY');
 
@@ -30,7 +32,7 @@ const initDb = () => {
         timestamp INTEGER,
         PRIMARY KEY (voucher_id, receiver_id)
     )`).run();
-
+    
     // Table 4: Amash Holders
     db.prepare(`CREATE TABLE IF NOT EXISTS amash (
         userid TEXT PRIMARY KEY, 
@@ -39,7 +41,7 @@ const initDb = () => {
         wTimestamp INTEGER DEFAULT 0,
         mTimestamp INTEGER DEFAULT 0
     )`).run();
-
+    
     // Table 5: Stonks
     db.prepare(`CREATE TABLE IF NOT EXISTS investments (
          investor TEXT, 

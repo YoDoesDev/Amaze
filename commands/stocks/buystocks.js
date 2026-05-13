@@ -1,11 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
 
 module.exports = {
     name: 'buystocks',
     aliases: ['bs'],
     cooldownGroup: "stocks",
-    cooldown: 180,
+    cooldown: 20,
     category: 'Stocks',
     description: 'Buy the stocks of a person to get profit from their reputation.',
 

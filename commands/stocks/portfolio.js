@@ -1,11 +1,11 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
 
 module.exports = {
   name: 'portfolio', 
   aliases: ['port', 'pf'], 
   category: 'Stocks', 
-  cooldown: 60,
+  cooldown: 25,
   description: 'Shows a list of stocks you/others have bought.', 
   async execute(message) { 
     const target = message.mentions.users.first() || message.author;

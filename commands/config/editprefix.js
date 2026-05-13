@@ -1,4 +1,5 @@
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
+const { setPrefix } = require('../../utils/prefixManager.js');
 
 module.exports = {
     name: 'editprefix',
@@ -32,6 +33,8 @@ module.exports = {
                 ON CONFLICT(guildid)
                 DO UPDATE SET prefix = excluded.prefix
             `).run(message.guild.id, newPrefix);
+
+            setPrefix(message.guild.id, newPrefix);
 
             message.reply(`Server prefix changed to \`${newPrefix}\``);
 

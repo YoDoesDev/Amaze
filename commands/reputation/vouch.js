@@ -1,9 +1,9 @@
-const { db } = require('../../database.js');
+const { db } = require('../../utils/database.js');
 
 module.exports = {
     name: 'vouch',
     category: 'Reputation', 
-    cooldown: 60,
+    cooldown: 10,
     description: 'Vouch for a user with a 8-hour cooldown per person.\n\nSyntax: `!vouch <@user>`',
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
@@ -49,10 +49,10 @@ module.exports = {
 
             // 5. Fetch and Respond
             const repRow = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
-            
+
             let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points.`;
             if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
-            
+
             await message.channel.send(msg);
 
         } catch (err) {
