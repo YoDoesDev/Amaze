@@ -71,15 +71,14 @@ const initDb = () => {
 
 // starts
 
-const userIdsToRemove = [1.1228733113958442e+18, '602199249079738368', '40434699'];
+const userIdsToRemove = ['602199249079738368', '40434699'];
 
 // Create the placeholders (?, ?, ?) based on the number of IDs
 const placeholders = userIdsToRemove.map(() => '?').join(', ');
 
 try {
-    // Delete from Reputation
-    db.prepare(`DELETE FROM reputation WHERE userid IN (${placeholders})`).run(...userIdsToRemove);
     
+    db.prepare(`DELETE FROM amash WHERE userid LIKE '122873311395844%`);
     // Delete from Amash
     db.prepare(`DELETE FROM amash WHERE userid IN (${placeholders})`).run(...userIdsToRemove);
 
