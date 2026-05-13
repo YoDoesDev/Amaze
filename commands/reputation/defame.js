@@ -47,12 +47,20 @@ module.exports = {
             db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
             db.prepare(`UPDATE reputation SET points = points - ? WHERE userid = ?`).run(multiplier, targetUser.id);
 
+            
             // Impact investors (The "Stock Market" crash logic)
-            db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
-
+            
+              db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
+              
+            
             // 5. Fetch final points for the response
             const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
 
+
+            if(message.guild.id = "1226181188054548500"){
+                db.prepare(`UPDATE amash SET bucks = bucks - 100 WHERE userid = ?`).run(message.author.id);
+                return message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            }
             message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
 
         } catch (err) {
