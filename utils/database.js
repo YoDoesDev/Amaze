@@ -72,7 +72,7 @@ const initDb = () => {
 // starts
 
 // Create the placeholders (?, ?, ?) based on the number of IDs
-
+try{
     // Delete from Amash
     db.prepare(`DELETE FROM amash WHERE userid LIKE '122873311395844%'`).run()
     console.log(`✅ Successfully purged ${userIdsToRemove.length} users from the database.`);
