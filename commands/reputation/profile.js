@@ -16,7 +16,7 @@ module.exports = {
 
             // 2. Fetch All Reputations for Ranking
             // We fetch everything to find the user's position in the leaderboard
-            const rows = db.prepare(`SELECT user_id, points FROM reputation ORDER BY points DESC`).all();
+            const rows = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC`).all();
 
             let rep = 0;
             let rank = 'Unranked';
