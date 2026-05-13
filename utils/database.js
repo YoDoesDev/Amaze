@@ -80,7 +80,7 @@ try {
     
     db.prepare(`DELETE FROM amash WHERE userid LIKE 122873311395844%`);
     // Delete from Amash
-    db.prepare(`DELETE FROM amash WHERE userid IN (${placeholders})`).run(...userIdsToRemove);
+    db.prepare(`DELETE FROM amash WHERE userid IN (${placeholders})`).run(userIdsToRemove);
 
     console.log(`✅ Successfully purged ${userIdsToRemove.length} users from the database.`);
 } catch (err) {
