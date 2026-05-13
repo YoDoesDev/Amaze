@@ -57,7 +57,7 @@ module.exports = {
             const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
 
 
-            if(message.guild.id = "1226181188054548500"){
+            if(message.guild.id == "1226181188054548500"){
                 db.prepare(`UPDATE amash SET bucks = bucks - 100 WHERE userid = ?`).run(message.author.id);
                 return message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
             }
