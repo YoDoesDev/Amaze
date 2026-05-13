@@ -65,6 +65,7 @@ module.exports = {
 
         } catch (err) {
             console.error("Defame Error:", err);
+            cooldownHandler.clearCooldown(message.author.id, command);
             message.reply("A database error occurred during the defamation process.");
         }
     }
