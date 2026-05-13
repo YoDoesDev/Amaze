@@ -77,8 +77,6 @@ const userIdsToRemove = ['602199249079738368', '40434699'];
 const placeholders = userIdsToRemove.map(() => '?').join(', ');
 
 try {
-    
-    db.prepare(`DELETE FROM amash WHERE userid LIKE 122873311395844%`).run();
     // Delete from Amash
     db.prepare(`DELETE FROM amash WHERE userid IN (${placeholders})`).run(userIdsToRemove);
 
