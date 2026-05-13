@@ -40,15 +40,15 @@ module.exports = {
             db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
 
             // Ensure reputation row exists and Update
-            db.prepare(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points + ? WHERE user_id = ?`).run(multiplier, targetUser.id);
+            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
+            db.prepare(`UPDATE reputation SET points = points + ? WHERE userid = ?`).run(multiplier, targetUser.id);
 
             // Update Investor Profits (Multiplied)
             const profitGain = 5 * multiplier;
             db.prepare(`UPDATE investments SET profit = profit + (stocks * ?) WHERE invested = ?`).run(profitGain, targetUser.id);
 
             // 5. Fetch and Respond
-            const repRow = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
+            const repRow = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
 
             let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points.`;
             if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
