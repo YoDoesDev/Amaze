@@ -6,28 +6,23 @@ module.exports = {
     category: 'Reputation',
     aliases: ['replb', 'rl'],
     cooldown: 30,
-    description: 'Shows a leaderboard with a toggle between Global and Server-only rankings.',
+    description: 'Toggle between Global and Server rankings.',
 
     async execute(message) {
         try {
-            // Helper to build the Embed & Buttons
             const createLeaderboard = async (isGlobal) => {
-                // Fetch all data from DB
-                const allData = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC`).all();
+                // Fetch Top 100 to ensure we find enough server members
+                const allData = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC LIMIT 100`).all();
                 
                 let data;
                 if (isGlobal) {
                     data = allData.slice(0, 10);
                 } else {
-                    // Optimized: Use cache for filtering instead of a full .fetch()
-                    const guildMemberIds = message.guild.members.cache.map(m => m.id);
+                    const topIds = allData.map(r => r.userid);
+                    // Targeted fetch: only the top 100 IDs
+                    const fetchedMembers = await message.guild.members.fetch({ user: topIds }).catch(() => new Map());
+                    const guildMemberIds = Array.from(fetchedMembers.keys());
                     data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
-                }
-
-                // Targeted Fetch: Only get the 10 users we actually need
-                if (data.length > 0) {
-                    const targetIds = data.map(d => d.userid);
-                    await message.guild.members.fetch({ user: targetIds }).catch(() => null);
                 }
 
                 const list = data.length 
@@ -42,49 +37,25 @@ module.exports = {
                     .setTimestamp();
 
                 const buttons = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('lb_server')
-                        .setLabel('Server')
-                        .setStyle(ButtonStyle.Primary)
-                        .setDisabled(!isGlobal),
-                    new ButtonBuilder()
-                        .setCustomId('lb_global')
-                        .setLabel('Global')
-                        .setStyle(ButtonStyle.Secondary)
-                        .setDisabled(isGlobal)
+                    new ButtonBuilder().setCustomId('lb_server').setLabel('Server').setStyle(ButtonStyle.Primary).setDisabled(!isGlobal),
+                    new ButtonBuilder().setCustomId('lb_global').setLabel('Global').setStyle(ButtonStyle.Secondary).setDisabled(isGlobal)
                 );
 
                 return { embeds: [embed], components: [buttons] };
             };
 
-            // Initial Send
-            const initialView = await createLeaderboard(false);
-            const response = await message.reply(initialView);
-
-            const collector = response.createMessageComponentCollector({ 
-                componentType: ComponentType.Button, 
-                time: 60000 
-            });
+            const response = await message.reply(await createLeaderboard(false));
+            const collector = response.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 });
 
             collector.on('collect', async i => {
-                if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "Only the command user can switch views.", ephemeral: true });
-                }
-
-                const showGlobal = i.customId === 'lb_global';
-                const updatedView = await createLeaderboard(showGlobal);
-
-                await i.update(updatedView);
+                if (i.user.id !== message.author.id) return i.reply({ content: "Unauthorized.", ephemeral: true });
+                await i.update(await createLeaderboard(i.customId === 'lb_global'));
             });
 
-            collector.on('end', () => {
-                response.edit({ components: [] }).catch(() => null);
-            });
-
+            collector.on('end', () => response.edit({ components: [] }).catch(() => null));
         } catch (error) {
-            console.error("Leaderboard Error:", error);
-            message.reply("An error occurred while fetching the leaderboard.");
+            console.error(error);
+            message.reply("Leaderboard error.");
         }
     }
 };
-
