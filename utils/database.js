@@ -69,18 +69,7 @@ const initDb = () => {
         prefix TEXT DEFAULT '!'
     )`).run();
 
-// starts
 
-// Create the placeholders (?, ?, ?) based on the number of IDs
-try{
-    // Delete from Amash
-    db.prepare(`DELETE FROM amash WHERE userid LIKE '122873311395844%'`).run()
-    
-} catch (err) {
-    console.error("Failed to delete users:", err);
-}
-
-// ends
 
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
