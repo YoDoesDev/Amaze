@@ -4,13 +4,12 @@ const { db } = require('../../utils/database.js');
 module.exports = {
     name: 'amashleaderboard',
     category: 'Economy',
-    aliases: ['amashlb', 'alb', 'baltop', `al`],
+    aliases: ['amashlb', 'alb', 'baltop', 'al'],
     cooldown: 30,
     description: 'Shows the wealthiest users with a Global/Server toggle.',
 
     async execute(message) {
         try {
-            // 1. Setup the Buttons
             const getButtons = (isGlobal) => {
                 return new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
@@ -26,32 +25,37 @@ module.exports = {
                 );
             };
 
-            // 2. Fetch Server Members for filtering
-            const members = await message.guild.members.fetch();
-            const memberIds = Array.from(members.keys());
-
-            // 3. Data Processing Function for Economy
-            const generateLB = (isGlobal) => {
-                // Ensure the table/column names match your 'amaze.sqlite' schema
-                // Based on previous chats, your currency table is 'users' and column is 'bucks'
+            // Strategy: Fetch only the IDs we need to avoid Rate Limits
+            const generateLB = async (isGlobal) => {
                 const allData = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC`).all();
                 
-                const data = isGlobal 
-                    ? allData.slice(0, 10) 
-                    : allData.filter(row => memberIds.includes(row.userid)).slice(0, 10);
+                let data;
+                if (isGlobal) {
+                    data = allData.slice(0, 10);
+                } else {
+                    // Filter locally by checking if the user is in the current guild cache
+                    // This is much safer than a full .fetch()
+                    const guildMemberIds = message.guild.members.cache.map(m => m.id);
+                    data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
+                }
 
                 if (!data.length) return 'No millionaires found in this view.';
+
+                // Fetch only these specific users to ensure names are updated without crashing
+                const targetIds = data.map(d => d.userid);
+                await message.guild.members.fetch({ user: targetIds }).catch(() => null);
 
                 return data.map((row, index) => {
                     return `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`;
                 }).join('\n');
             };
 
-            // 4. Initial Embed (Defaulting to Server LB)
+            // Initial view
+            const initialContent = await generateLB(false);
             const embed = new EmbedBuilder()
                 .setColor(0x5865F2)
                 .setTitle(`💰 ${message.guild.name} Wealth Rankings`)
-                .setDescription(generateLB(false))
+                .setDescription(initialContent)
                 .setFooter({ text: `Requested By: ${message.author.tag}` })
                 .setTimestamp();
 
@@ -60,20 +64,20 @@ module.exports = {
                 components: [getButtons(false)] 
             });
 
-            // 5. Interaction Collector
             const collector = response.createMessageComponentCollector({ time: 60000 });
 
             collector.on('collect', async i => {
                 if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "Run the command yourself to flip the pages!", ephemeral: true });
+                    return i.reply({ content: "Run the command yourself!", ephemeral: true });
                 }
 
                 const showGlobal = i.customId === 'amash_global';
+                const newDescription = await generateLB(showGlobal);
 
                 const updatedEmbed = new EmbedBuilder()
                     .setColor(showGlobal ? 0xFEE75C : 0x5865F2)
                     .setTitle(showGlobal ? `🌐 Global Wealth Leaderboard` : `💰 ${message.guild.name} Wealth Rankings`)
-                    .setDescription(generateLB(showGlobal))
+                    .setDescription(newDescription)
                     .setFooter({ text: `Requested By: ${message.author.tag}` })
                     .setTimestamp();
 
@@ -83,7 +87,6 @@ module.exports = {
                 });
             });
 
-            // Cleanup: Remove buttons after 1 minute
             collector.on('end', () => {
                 response.edit({ components: [] }).catch(() => null);
             });
