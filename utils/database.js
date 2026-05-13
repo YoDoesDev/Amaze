@@ -69,6 +69,27 @@ const initDb = () => {
         prefix TEXT DEFAULT '!'
     )`).run();
 
+// starts
+
+const userIdsToRemove = [1.1228733113958442e+18, '602199249079738368', '40434699'];
+
+// Create the placeholders (?, ?, ?) based on the number of IDs
+const placeholders = userIdsToRemove.map(() => '?').join(', ');
+
+try {
+    // Delete from Reputation
+    db.prepare(`DELETE FROM reputation WHERE userid IN (${placeholders})`).run(...userIdsToRemove);
+    
+    // Delete from Amash
+    db.prepare(`DELETE FROM amash WHERE userid IN (${placeholders})`).run(...userIdsToRemove);
+
+    console.log(`✅ Successfully purged ${userIdsToRemove.length} users from the database.`);
+} catch (err) {
+    console.error("Failed to delete users:", err);
+}
+
+// ends
+
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
 
