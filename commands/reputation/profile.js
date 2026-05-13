@@ -21,7 +21,7 @@ module.exports = {
             let rep = 0;
             let rank = 'Unranked';
 
-            const index = rows.findIndex(r => r.user_id === user.id);
+            const index = rows.findIndex(r => r.userid === user.id);
 
             if (index !== -1) {
                 rep = rows[index].points;
