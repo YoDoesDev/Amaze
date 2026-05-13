@@ -10,19 +10,25 @@ module.exports = {
 
     async execute(message) {
         try {
-            // 1. Fetching all members can be slow/fail without GUILD_MEMBERS intent.
-            // We fetch them once to use for the "Server" filter.
-            const members = await message.guild.members.fetch();
-            const memberIds = Array.from(members.keys());
-
-            // 2. Helper to build the Embed & Buttons
-            const createLeaderboard = (isGlobal) => {
+            // Helper to build the Embed & Buttons
+            const createLeaderboard = async (isGlobal) => {
+                // Fetch all data from DB
                 const allData = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC`).all();
                 
-                // Filter logic
-                const data = isGlobal 
-                    ? allData.slice(0, 10) 
-                    : allData.filter(row => memberIds.includes(row.userid)).slice(0, 10);
+                let data;
+                if (isGlobal) {
+                    data = allData.slice(0, 10);
+                } else {
+                    // Optimized: Use cache for filtering instead of a full .fetch()
+                    const guildMemberIds = message.guild.members.cache.map(m => m.id);
+                    data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
+                }
+
+                // Targeted Fetch: Only get the 10 users we actually need
+                if (data.length > 0) {
+                    const targetIds = data.map(d => d.userid);
+                    await message.guild.members.fetch({ user: targetIds }).catch(() => null);
+                }
 
                 const list = data.length 
                     ? data.map((row, i) => `**${i + 1}.** <@${row.userid}> — \`${row.points}\` pts`).join('\n')
@@ -51,11 +57,10 @@ module.exports = {
                 return { embeds: [embed], components: [buttons] };
             };
 
-            // 3. Initial Send
-            const initialView = createLeaderboard(false);
+            // Initial Send
+            const initialView = await createLeaderboard(false);
             const response = await message.reply(initialView);
 
-            // 4. Collector (Explicitly using ComponentType for better reliability)
             const collector = response.createMessageComponentCollector({ 
                 componentType: ComponentType.Button, 
                 time: 60000 
@@ -67,7 +72,7 @@ module.exports = {
                 }
 
                 const showGlobal = i.customId === 'lb_global';
-                const updatedView = createLeaderboard(showGlobal);
+                const updatedView = await createLeaderboard(showGlobal);
 
                 await i.update(updatedView);
             });
@@ -82,3 +87,4 @@ module.exports = {
         }
     }
 };
+
