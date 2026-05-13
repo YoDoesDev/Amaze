@@ -4,7 +4,7 @@ module.exports = {
     name: 'defame',
     category: 'Reputation', 
     cooldown: 10,
-    description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>`',
+    description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>\n\n(Costs 100 Amash in selected servers)`',
     async execute(message, args) { 
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
