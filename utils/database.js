@@ -20,10 +20,10 @@ const initDb = () => {
 
     // 3. Initialize Tables (Synchronous & Sequential)
     // Table 1: Pings
-    db.prepare(`CREATE TABLE IF NOT EXISTS pings (user_id TEXT PRIMARY KEY, count INTEGER DEFAULT 0)`).run();
+    db.prepare(`CREATE TABLE IF NOT EXISTS pings (userid TEXT PRIMARY KEY, count INTEGER DEFAULT 0)`).run();
     
     // Table 2: Reputation
-    db.prepare(`CREATE TABLE IF NOT EXISTS reputation (user_id TEXT PRIMARY KEY, points INTEGER DEFAULT 0)`).run();
+    db.prepare(`CREATE TABLE IF NOT EXISTS reputation (userid TEXT PRIMARY KEY, points INTEGER DEFAULT 0)`).run();
     
     // Table 3: Vouch History
     db.prepare(`CREATE TABLE IF NOT EXISTS vouch_history (
