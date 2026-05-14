@@ -6,7 +6,11 @@ module.exports = {
         const pingmsg = await message.reply("Pinging...");
         const latency = pingmsg.createdTimestamp - message.createdTimestamp;
         
-        const heartbeat = message.client.ws.ping;
+        // guard against -1 ms heartbeat
+        const heartbeat = 
+            message.client.ws.ping > 0
+            ? `${message.client.ws.ping}ms`
+            : 'Unavailable';
 
         pingmsg.edit(
             `🏓 **Pong!**\n**Latency:** ${latency}ms\n**API Heartbeat:** ${heartbeat}ms`

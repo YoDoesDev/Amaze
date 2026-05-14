@@ -38,7 +38,7 @@ module.exports = {
       return message.reply("A Database error occurred.");
     }
 
-    // 4. Game Setup
+    // 4. Game Setup, MAX chance 75% setting EVmax to 1.5
     call = call.startsWith("h") ? "heads" : "tails";
     const effectiveStones = Math.min(stones, 20);
     const winChance = 0.5 + (0.0125 * effectiveStones);
