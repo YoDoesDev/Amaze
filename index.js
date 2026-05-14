@@ -71,10 +71,11 @@ client.once("clientReady", () => {
 
 // --- 6. INTERACTION HANDLER ---
 client.on("interactionCreate", async interaction => {
+    if(interaction.isButton()) return;
     await interaction.deferReply();
     // 1. Only handle Chat Input (Slash) commands
     if (!interaction.isChatInputCommand()) return;
-    if(interaction.isButton()) return;
+    
     // 2. Retrieve the command from your defined collection
     const command = client.slashCommands.get(interaction.commandName);
 
