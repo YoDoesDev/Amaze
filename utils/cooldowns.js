@@ -26,7 +26,7 @@ module.exports = {
         return false; // Continue execution
     }, 
 
-    handleSlashCd: async (interaction, commandData) => {
+    handleSlashCd: (interaction, commandData) => {
         const cooldownKey = commandData.cooldownGroup || commandData.name;
         const cooldownAmount = (commandData.cooldown || 5) * 1000;
 
