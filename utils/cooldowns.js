@@ -44,7 +44,7 @@ module.exports = {
                 const timeLeft = ((expirationTime - now) / 1000).toFixed(0);
                 
                 // We use ephemeral so only the user sees the warning
-                await interaction.reply({
+                interaction.reply({
                     content: `Slow down! Wait **${timeLeft}s** before using a \`${cooldownKey}\` command again.`,
                     ephemeral: true
                 });
