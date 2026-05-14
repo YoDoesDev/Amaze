@@ -7,14 +7,18 @@ const token = process.env.TOKEN;
 const rest = new REST().setToken(token);
 
 const slashReg = async () => {
-  await rest.put(Routes.applicationGuildCommands(apId, svrId), 
-  {
-    body: [
-      new SlashCommandBuilder()
-      .setName("ping")
-      .setDescription("Shows bot's latency")
-    ]
-  }) 
+  try{
+    await rest.put(Routes.applicationGuildCommands(apId, svrId), 
+    {
+      body: [
+        new SlashCommandBuilder()
+        .setName("mention")
+        .setDescription("Shows bot's latency")
+      ]
+    }) 
+  } catch(err){
+    return console.log("Slash Registration Error: " + err);
+  }
 };
 
 slashReg();
