@@ -1,4 +1,5 @@
 const { db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'vouch',
@@ -57,6 +58,7 @@ module.exports = {
 
         } catch (err) {
             console.error("Vouch Command Error:", err);
+            clearCooldown(message.author.id, module.exports);
             return message.reply("A database error occurred while recording the vouch.");
         }
     }

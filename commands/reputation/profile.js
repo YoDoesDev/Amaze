@@ -1,5 +1,6 @@
 const { db } = require('../../utils/database.js');
 const { EmbedBuilder } = require('discord.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'profile',
@@ -54,6 +55,7 @@ module.exports = {
 
         } catch (err) {
             console.error("Profile Command Error:", err);
+            clearCooldown(message.author.id, module.exports);
             return message.reply('An error occurred while fetching the profile.');
         }
     }

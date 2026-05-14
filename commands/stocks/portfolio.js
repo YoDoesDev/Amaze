@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
   name: 'portfolio', 
@@ -36,6 +37,7 @@ module.exports = {
 
     } catch (err) {
       console.error("Portfolio Error:", err);
+      clearCooldown(message.author.id, module.exports);
       return message.reply("A database error occurred while fetching the portfolio!");
     }
   }

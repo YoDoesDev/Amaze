@@ -24,5 +24,13 @@ module.exports = {
         timestamp.set(message.author.id, now);
         setTimeout(() => timestamp.delete(message.author.id), cooldownAmount);
         return false; // Continue execution
+    },
+
+    clearCooldown: (userId, command) => {
+        const cooldownKey = command.cooldownGroup || command.name;
+
+        if (!cooldowns.has(cooldownKey)) return;
+
+        cooldowns.get(cooldownKey).delete(userId);
     }
 };

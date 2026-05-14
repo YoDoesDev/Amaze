@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'repleaderboard',
@@ -55,6 +56,7 @@ module.exports = {
             collector.on('end', () => response.edit({ components: [] }).catch(() => null));
         } catch (error) {
             console.error(error);
+            clearCooldown(message.author.id, module.exports);
             message.reply("Leaderboard error.");
         }
     }

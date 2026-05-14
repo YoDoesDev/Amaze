@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js'); 
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'repstats',
@@ -28,6 +29,7 @@ module.exports = {
 
         } catch (error) {
             console.error(">>> [CRITICAL] RepStats Execution crashed:", error);
+            clearCooldown(message.author.id, module.exports);
             message.reply("Could not retrieve reputation data at this moment.");
         }
     }

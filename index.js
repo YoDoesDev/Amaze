@@ -14,7 +14,6 @@ require('dotenv').config();
 
 // --- DATABASE & MANAGERS ---
 const { initDb, db } = require('./utils/database.js');
-const { getPrefix } = require('./utils/prefixManager.js');
 
 
 // --- 3. CUSTOM UTILITIES ---
@@ -56,6 +55,9 @@ client.aliases = new Map();
 initDb();
 loadCommands(client);
 loadSlashCommands(client);
+
+// PREFIXMANAGER LOADS AFTER DATABASE IS ESTABLISHED.
+const { getPrefix } = require('./utils/prefixManager.js');
 
 // --- 5. CLIENT READY EVENT ---
 client.once("clientReady", () => {
