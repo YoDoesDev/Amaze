@@ -72,12 +72,6 @@ client.once("clientReady", () => {
 client.on("interactionCreate", async interaction => {
   
   if(!interaction.isChatInputCommand()) return;
-
-  const cmdConfig = {
-      name: interaction.commandName, 
-      cooldown: 5
-  }
-  // if (await handleSlashCd(interaction, cmdConfig)) return;
     
   if(interaction.commandName == "mention"){
     await interaction.reply({
