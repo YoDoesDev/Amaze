@@ -68,7 +68,7 @@ client.once("clientReady", () => {
 });
 
 // --- 6. INTERACTION HANDLER ---
-slashReg();
+// slashReg();
 client.on("interactionCreate", async interaction => {
   
   if(!interaction.isChatInputCommand()) return;
