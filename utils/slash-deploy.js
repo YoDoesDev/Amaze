@@ -21,4 +21,4 @@ const slashReg = async () => {
   }
 };
 
-slashReg();
+slashReg().then(() => console.log("4. Script finished."));
