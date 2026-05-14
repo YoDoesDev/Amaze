@@ -22,7 +22,7 @@ module.exports = {
       
       // 2. Logic for uninitialized accounts
       if (!row) {
-        return interaction.reply({
+        return interaction.editReply({
           content:
           targetUser.id === interaction.user.id
           ? "You don't have an amash account yet! Use `!daily` to open one and get your first bucks." 
@@ -39,11 +39,11 @@ module.exports = {
         .setFooter({ text: `Requested By: ${interaction.user.username}` })
         .setTimestamp();
       
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
       console.error("Amash Balance Error:", err);
-      return interaction.reply({
+      return interaction.editReply({
         content: "A database error occurred while checking the balance.", 
         ephemeral: true
       });
