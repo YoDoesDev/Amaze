@@ -74,7 +74,7 @@ client.on("interactionCreate", interaction => {
   if(!interaction.isChatInputCommand()) return;
   
   if(interaction.commandName == "mention"){
-    interaction.reply({
+    await interaction.reply({
       content: "Pong!"
     });
   }
