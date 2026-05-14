@@ -74,7 +74,7 @@ client.on("interactionCreate", async interaction => {
   if(!interaction.isChatInputCommand()) return;
 
   const cmdConfig = {
-      name: "ping", 
+      name: interaction.commandName, 
       cooldown: 5
   }
   if (handleSlashCd(interaction, cmdConfig)) return;
