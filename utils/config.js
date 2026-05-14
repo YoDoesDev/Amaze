@@ -6,4 +6,7 @@ const emojis = {
   "slots": "<a:slots:1503011722628173925>"
 };
 
-module.exports = { emojis };
+const clientId = 1494637741722566656;
+const guildId = 1494944799264870483;
+
+module.exports = { emojis, clientId, guildId };
