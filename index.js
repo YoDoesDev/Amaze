@@ -77,7 +77,7 @@ client.on("interactionCreate", async interaction => {
       name: interaction.commandName, 
       cooldown: 5
   }
-  if (handleSlashCd(interaction, cmdConfig)) return;
+  if (await handleSlashCd(interaction, cmdConfig)) return;
     
   if(interaction.commandName == "mention"){
     await interaction.reply({
