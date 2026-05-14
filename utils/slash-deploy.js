@@ -1,26 +1,46 @@
-const { REST, Routes, SlashCommandBuilder} = require(`discord.js`);
+const { REST, Routes } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
+// Import your config/token
+const { token, clientId, guildId } = require('./config.json'); 
 
-const svrId = '1494944799264870483';
-const apId = '1494637741722566656';
-const token = process.env.TOKEN;
+const commands = [];
+const slashPath = path.join(__dirname, 'slashCommands');
 
-const rest = new REST().setToken(token);
+// 1. Logic to grab all command data (matches your loader logic)
+const slashFolders = fs.readdirSync(slashPath);
+for (const folder of slashFolders) {
+    const folderPath = path.join(slashPath, folder);
+    const isDir = fs.lstatSync(folderPath).isDirectory();
+    const commandFiles = isDir 
+        ? fs.readdirSync(folderPath).filter(file => file.endsWith('.js'))
+        : [folder].filter(file => file.endsWith('.js'));
 
-const slashReg = async () => {
-  try{
-    await rest.put(Routes.applicationGuildCommands(apId, svrId), 
-    {
-      body: [
-        new SlashCommandBuilder()
-        .setName("mention")
-        .setDescription("Shows bot's latency")
-      ]
-    }) 
-  } catch(err){
-    return console.log("Slash Registration Error: " + err);
-  }
-};
+    for (const file of commandFiles) {
+        const filePath = isDir ? path.join(folderPath, file) : path.join(slashPath, file);
+        const command = require(filePath);
+        if (command.data) {
+            commands.push(command.data.toJSON());
+        }
+    }
+}
 
-slashReg().then(() => console.log("4. Script finished."));
+// 2. Prepare the REST manager
+const rest = new REST({ version: '10' }).setToken(token);
 
-module.exports = { slashReg };
+// 3. Deploy!
+(async () => {
+    try {
+        console.log(`>>> [SYSTEM] Refreshing ${commands.length} slash commands...`);
+
+    
+        await rest.put(
+            Routes.applicationGuildCommands(clientId, guildId),
+            { body: commands },
+        );
+
+        console.log('>>> [SUCCESS] Commands deployed successfully!');
+    } catch (error) {
+        console.error(error);
+    }
+})();
