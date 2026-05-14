@@ -72,7 +72,8 @@ slashReg();
 client.on("interactionCreate", async interaction => {
   
   if(!interaction.isChatInputCommand()) return;
-  
+  if (handleCooldown(message, command)) return;
+    
   if(interaction.commandName == "mention"){
     await interaction.reply({
       content: "Pong!"
