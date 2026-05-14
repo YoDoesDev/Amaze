@@ -2,7 +2,7 @@ const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 // Import your config/token
-const { token, clientId, guildId } = require('./config.js'); 
+const { clientId, guildId } = require('./config.js'); 
 
 const commands = [];
 const slashPath = path.join(__dirname, '../slashCommands');
@@ -26,7 +26,7 @@ for (const folder of slashFolders) {
 }
 
 // 2. Prepare the REST manager
-const rest = new REST({ version: '10' }).setToken(token);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 // 3. Deploy!
 const slashReg = async () => {
