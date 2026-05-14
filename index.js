@@ -66,7 +66,19 @@ client.once("clientReady", () => {
     });
 });
 
-// --- 6. MESSAGE HANDLER ---
+// --- 6. INTERACTION HANDLER ---
+client.on("interactionCreate", interaction => {
+  
+  if(!interaction.isChatInputCommand()) return;
+  
+  if(interaction.commandName == "ping"){
+    interaction.reply({
+      content: "Pong!"
+    });
+  }
+});
+
+// --- 7. MESSAGE HANDLER ---
 client.on('messageCreate', async (message) => {
     // Basic Gates
     if (message.author.bot) return;
@@ -104,5 +116,5 @@ client.on('messageCreate', async (message) => {
     }   
 });
 
-// --- 7. START BOT ---
+// --- 8. START BOT ---
 client.login(process.env.TOKEN);
