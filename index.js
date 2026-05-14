@@ -60,7 +60,7 @@ loadSlashCommands(client);
 // --- 5. CLIENT READY EVENT ---
 client.once("clientReady", () => {
     console.log(`>>> [SYSTEM] Amaze Live: ${client.guilds.cache.size} servers.`);
-    
+    await slashReg();
     // Launch Webhooks and Top.gg Sync
     setupIntegrations(client, app, db);
 
@@ -70,7 +70,6 @@ client.once("clientReady", () => {
 });
 
 // --- 6. INTERACTION HANDLER ---
-await slashReg();
 client.on("interactionCreate", async interaction => {
     // 1. Only handle Chat Input (Slash) commands
     if (!interaction.isChatInputCommand()) return;
