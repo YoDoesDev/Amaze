@@ -26,7 +26,7 @@ module.exports = {
         return false; // Continue execution
     }, 
 
-    handleSlashCd: (interaction, commandData) => {
+    handleSlashCd: async (interaction, commandData) => {
         const cooldownKey = commandData.cooldownGroup || commandData.name;
         const cooldownAmount = (commandData.cooldown || 5) * 1000;
 
@@ -44,7 +44,7 @@ module.exports = {
                 const timeLeft = ((expirationTime - now) / 1000).toFixed(0);
                 
                 // We use ephemeral so only the user sees the warning
-                interaction.reply({
+                await interaction.reply({
                     content: `Slow down! Wait **${timeLeft}s** before using a \`${cooldownKey}\` command again.`,
                     ephemeral: true
                 });
