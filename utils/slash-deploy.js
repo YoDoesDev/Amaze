@@ -2,7 +2,7 @@ const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 // Import your config/token
-const { token, clientId, guildId } = require('./config.json'); 
+const { token, clientId, guildId } = require('./config.js'); 
 
 const commands = [];
 const slashPath = path.join(__dirname, 'slashCommands');
