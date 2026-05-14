@@ -22,6 +22,7 @@ const { loadCommands } = require('./utils/cmdLoader.js');
 const { handleCooldown } = require('./utils/cooldowns.js');
 const { autoMsg } = require('./utils/automsg.js');
 const { setupIntegrations } = require('./utils/integrations.js');
+const { slashReg } = require('./utils/slash-deploy.js');
 
 // --- 4. INITIALIZATION ---
 const app = express();
@@ -67,6 +68,7 @@ client.once("clientReady", () => {
 });
 
 // --- 6. INTERACTION HANDLER ---
+slashDeploy();
 client.on("interactionCreate", interaction => {
   
   if(!interaction.isChatInputCommand()) return;
