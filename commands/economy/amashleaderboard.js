@@ -72,23 +72,24 @@ module.exports = {
             });
 
             collector.on('collect', async i => {
-                if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "Only the person who ran the command can flip pages.", ephemeral: true });
-                }
+    // 1. Security Check
+    if (i.user.id !== message.author.id) {
+        return i.reply({ content: "Unauthorized.", ephemeral: true });
+    }
 
-                const showGlobal = i.customId === 'amash_global';
-                const newDesc = await generateLB(showGlobal);
+    try {
+        // 2. STOP THE CLOCK (Tells Discord: "Working on it!")
+        await i.deferUpdate();
 
-                const updatedEmbed = EmbedBuilder.from(embed)
-                    .setColor(showGlobal ? 0xFEE75C : 0x5865F2)
-                    .setTitle(showGlobal ? `🌐 Global Wealth Leaderboard` : `💰 ${message.guild.name} Wealth Rankings`)
-                    .setDescription(newDesc);
+        // 3. Update the board
+        const updatedBoard = await generateLB(i.customId === 'amash_global');
+        await i.editReply(updatedBoard); 
 
-                await i.update({ 
-                    embeds: [updatedEmbed], 
-                    components: [getButtons(showGlobal)] 
-                });
-            });
+    } catch (error) {
+        console.error("Leaderboard Button Error:", error);
+    }
+});
+
 
             // Remove buttons when finished
             collector.on('end', () => {
