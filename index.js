@@ -77,7 +77,7 @@ client.on("interactionCreate", async interaction => {
       name: "ping", 
       cooldown: 5
   }
-  if (handleSlashCd(message, cmdConfig)) return;
+  if (handleSlashCd(interaction, cmdConfig)) return;
     
   if(interaction.commandName == "mention"){
     await interaction.reply({
