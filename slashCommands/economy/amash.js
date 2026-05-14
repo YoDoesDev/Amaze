@@ -13,7 +13,7 @@ module.exports = {
   category: 'Economy', 
   cooldown: 30,
   async execute(interaction) {
-    const receive = interactions.options.getUser("user");
+    const receive = interaction.options.getUser("user");
     const targetUser = receive || interaction.user;
 
     try {
