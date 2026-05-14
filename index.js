@@ -17,10 +17,11 @@ const { initDb, db } = require('./utils/database.js');
 
 
 // --- 3. CUSTOM UTILITIES ---
-const { loadCommands } = require('./utils/cmdLoader.js');
+const { loadCommands, loadSlashCommands} = require('./utils/cmdLoader.js');
 const { handleCooldown } = require('./utils/cooldowns.js');
 const { autoMsg } = require('./utils/automsg.js');
 const { setupIntegrations } = require('./utils/integrations.js');
+const { slashReg } = require('./utils/slash-deploy.js');
 
 // --- 4. INITIALIZATION ---
 const app = express();
@@ -47,11 +48,13 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+client.slashCommands = new Collection();
 client.aliases = new Map();
 
 // Fire up the systems
 initDb();
 loadCommands(client);
+loadSlashCommands(client);
 
 // PREFIXMANAGER LOADS AFTER DATABASE IS ESTABLISHED.
 const { getPrefix } = require('./utils/prefixManager.js');
@@ -59,7 +62,7 @@ const { getPrefix } = require('./utils/prefixManager.js');
 // --- 5. CLIENT READY EVENT ---
 client.once("clientReady", () => {
     console.log(`>>> [SYSTEM] Amaze Live: ${client.guilds.cache.size} servers.`);
-    
+    slashReg();
     // Launch Webhooks and Top.gg Sync
     setupIntegrations(client, app, db);
 
@@ -68,7 +71,40 @@ client.once("clientReady", () => {
     });
 });
 
-// --- 6. MESSAGE HANDLER ---
+// --- 6. INTERACTION HANDLER ---
+client.on("interactionCreate", async interaction => {
+    if(interaction.isButton()) return;
+    await interaction.deferReply();
+    // 1. Only handle Chat Input (Slash) commands
+    if (!interaction.isChatInputCommand()) return;
+    
+    // 2. Retrieve the command from your defined collection
+    const command = client.slashCommands.get(interaction.commandName);
+
+    // 3. If the command doesn't exist, just exit
+    if (!command) return;
+
+    try {
+        // if (handleSlashCd(interaction, command)) return;
+        await command.execute(interaction); 
+        // 4. Run the command's execute function
+        
+
+    } catch (error) {
+        console.error(`[ERROR] Execution failed for /${interaction.commandName}:`, error);
+
+        // 5. User-friendly error handling
+        const errorMessage = { content: 'There was an error while executing this command!', ephemeral: true };
+        
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(errorMessage);
+        } else {
+            await interaction.reply(errorMessage);
+        }
+    }
+});
+
+// --- 7. MESSAGE HANDLER ---
 client.on('messageCreate', async (message) => {
     // Basic Gates
     if (message.author.bot) return;
@@ -106,5 +142,5 @@ client.on('messageCreate', async (message) => {
     }   
 });
 
-// --- 7. START BOT ---
+// --- 8. START BOT ---
 client.login(process.env.TOKEN);

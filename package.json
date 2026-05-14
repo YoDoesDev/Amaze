@@ -2,6 +2,7 @@
   "name": "amaze-bot",
   "version": "1.1.0",
   "main": "index.js",
+  "type": "commonjs", 
   "dependencies": {
     "better-sqlite3": "^11.0.0",
     "discord.js": "^14.26.3",
