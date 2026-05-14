@@ -84,7 +84,9 @@ client.on("interactionCreate", async interaction => {
         // if (handleSlashCd(interaction, command)) return;
 
         // 4. Run the command's execute function
-        await command.execute(interaction);
+        if(interaction.commandName == "amash"){
+            await interaction.reply("I seeee youu~");
+        }
 
     } catch (error) {
         console.error(`[ERROR] Execution failed for /${interaction.commandName}:`, error);
