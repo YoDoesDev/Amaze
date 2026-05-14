@@ -29,7 +29,7 @@ for (const folder of slashFolders) {
 const rest = new REST({ version: '10' }).setToken(token);
 
 // 3. Deploy!
-(async () => {
+const slashReg = async () => {
     try {
         console.log(`>>> [SYSTEM] Refreshing ${commands.length} slash commands...`);
 
@@ -43,4 +43,6 @@ const rest = new REST({ version: '10' }).setToken(token);
     } catch (error) {
         console.error(error);
     }
-})();
+}();
+
+module.exports = { slashReg };
