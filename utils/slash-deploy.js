@@ -43,6 +43,6 @@ const slashReg = async () => {
     } catch (error) {
         console.error(error);
     }
-}();
+};
 
 module.exports = { slashReg };
