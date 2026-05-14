@@ -18,7 +18,7 @@ const { getPrefix } = require('./utils/prefixManager.js');
 
 
 // --- 3. CUSTOM UTILITIES ---
-const { loadCommands } = require('./utils/cmdLoader.js');
+const { loadCommands, loadSlashCommands} = require('./utils/cmdLoader.js');
 const { handleCooldown } = require('./utils/cooldowns.js');
 const { autoMsg } = require('./utils/automsg.js');
 const { setupIntegrations } = require('./utils/integrations.js');
@@ -55,6 +55,7 @@ client.aliases = new Map();
 // Fire up the systems
 initDb();
 loadCommands(client);
+loadSlashCommands(client);
 
 // --- 5. CLIENT READY EVENT ---
 client.once("clientReady", () => {
@@ -71,14 +72,33 @@ client.once("clientReady", () => {
 // --- 6. INTERACTION HANDLER ---
 // slashReg();
 client.on("interactionCreate", async interaction => {
-  
-  if(!interaction.isChatInputCommand()) return;
-    
-  if(interaction.commandName == "mention"){
-    await interaction.reply({
-      content: "Pong!"
-    });
-  }
+    // 1. Only handle Chat Input (Slash) commands
+    if (!interaction.isChatInputCommand()) return;
+
+    // 2. Retrieve the command from your defined collection
+    const command = client.slashCommands.get(interaction.commandName);
+
+    // 3. If the command doesn't exist, just exit
+    if (!command) return;
+
+    try {
+        // if (handleSlashCd(interaction, command)) return;
+
+        // 4. Run the command's execute function
+        await command.execute(interaction);
+
+    } catch (error) {
+        console.error(`[ERROR] Execution failed for /${interaction.commandName}:`, error);
+
+        // 5. User-friendly error handling
+        const errorMessage = { content: 'There was an error while executing this command!', ephemeral: true };
+        
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(errorMessage);
+        } else {
+            await interaction.reply(errorMessage);
+        }
+    }
 });
 
 // --- 7. MESSAGE HANDLER ---
