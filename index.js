@@ -60,7 +60,7 @@ loadSlashCommands(client);
 // --- 5. CLIENT READY EVENT ---
 client.once("clientReady", () => {
     console.log(`>>> [SYSTEM] Amaze Live: ${client.guilds.cache.size} servers.`);
-    await slashReg();
+    slashReg();
     // Launch Webhooks and Top.gg Sync
     setupIntegrations(client, app, db);
 
