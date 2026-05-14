@@ -27,33 +27,34 @@ module.exports = {
     }, 
 
     handleSlashCd: async (interaction, commandData) => {
-        const cooldownKey = commandData.cooldownGroup || commandData.name;
-        const cooldownAmount = (commandData.cooldown || 5) * 1000;
+        const { name, cooldown } = commandData;
+        const userId = interaction.user.id;
 
-        if (!cooldowns.has(cooldownKey)) {
-            cooldowns.set(cooldownKey, new Map());
+        if (!cooldowns.has(name)) {
+            cooldowns.set(name, new Map());
         }
 
-        const timestamp = cooldowns.get(cooldownKey);
         const now = Date.now();
-        const userId = interaction.user.id; // Interactions use .user, not .author
+        const timestamps = cooldowns.get(name);
+        const cooldownAmount = cooldown * 1000;
 
-        if (timestamp.has(userId)) {
-            const expirationTime = timestamp.get(userId) + cooldownAmount;
+        if (timestamps.has(userId)) {
+            const expirationTime = timestamps.get(userId) + cooldownAmount;
+
             if (now < expirationTime) {
-                const timeLeft = ((expirationTime - now) / 1000).toFixed(0);
-                
-                // We use ephemeral so only the user sees the warning
-                await interaction.reply({
-                    content: `Slow down! Wait **${timeLeft}s** before using a \`${cooldownKey}\` command again.`,
-                    ephemeral: true
+                const timeLeft = (expirationTime - now) / 1000;
+                // THIS LINE IS THE KEY
+                await interaction.reply({ 
+                    content: `Please wait ${timeLeft.toFixed(1)} more seconds before using /${name} again.`, 
+                    ephemeral: true 
                 });
-                return true; 
+                return true; // This tells index.js to STOP
             }
         }
 
-        timestamp.set(userId, now);
-        setTimeout(() => timestamp.delete(userId), cooldownAmount);
-        return false;
+        // If not on cooldown, set the new timestamp and return false
+        timestamps.set(userId, now);
+        setTimeout(() => timestamps.delete(userId), cooldownAmount);
+        return false; // This tells index.js to PROCEED
     }
 };
