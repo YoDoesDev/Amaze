@@ -35,10 +35,15 @@ const slashReg = () => {
         console.log(`>>> [SYSTEM] Refreshing ${commands.length} slash commands...`);
 
     
-        await rest.put(
+        rest.put(
             Routes.applicationGuildCommands(clientId, guildId),
             { body: commands },
-        );
+        ).then(() => {
+        console.log('>>> [SUCCESS] Commands deployed successfully!');
+    })
+    .catch((error) => {
+        console.error(">>> [DEPLOY ERROR]:", error);
+    });;
 
         console.log('>>> [SUCCESS] Commands deployed successfully!');
     } catch (error) {
