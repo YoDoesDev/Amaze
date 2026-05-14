@@ -72,7 +72,12 @@ slashReg();
 client.on("interactionCreate", async interaction => {
   
   if(!interaction.isChatInputCommand()) return;
-  if (handleCooldown(message, command)) return;
+
+  const cmdConfig = {
+      name: "ping", 
+      cooldown: 5
+  }
+  if (handleSlashCd(message, cmdConfig)) return;
     
   if(interaction.commandName == "mention"){
     await interaction.reply({
