@@ -23,4 +23,4 @@ const slashReg = async () => {
 
 slashReg().then(() => console.log("4. Script finished."));
 
-nodule.exports = { slashReg };
+module.exports = { slashReg };
