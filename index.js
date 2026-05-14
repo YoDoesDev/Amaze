@@ -69,7 +69,7 @@ client.once("clientReady", () => {
 
 // --- 6. INTERACTION HANDLER ---
 slashReg();
-client.on("interactionCreate", async interaction => {
+client.on("interactionCreate", interaction => {
   
   if(!interaction.isChatInputCommand()) return;
 
@@ -80,7 +80,7 @@ client.on("interactionCreate", async interaction => {
   if (await handleSlashCd(interaction, cmdConfig)) return;
     
   if(interaction.commandName == "mention"){
-    await interaction.reply({
+    interaction.reply({
       content: "Pong!"
     });
   }
