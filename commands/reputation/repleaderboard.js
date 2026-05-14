@@ -49,9 +49,24 @@ module.exports = {
             const collector = response.createMessageComponentCollector({ componentType: ComponentType.Button, time: 60000 });
 
             collector.on('collect', async i => {
-                if (i.user.id !== message.author.id) return i.reply({ content: "Unauthorized.", ephemeral: true });
-                await i.update(await createLeaderboard(i.customId === 'lb_global'));
-            });
+    // 1. Security Check
+    if (i.user.id !== message.author.id) {
+        return i.reply({ content: "Unauthorized.", ephemeral: true });
+    }
+
+    try {
+        // 2. STOP THE CLOCK (Tells Discord: "Working on it!")
+        await i.deferUpdate();
+
+        // 3. Update the board
+        const updatedBoard = await createLeaderboard(i.customId === 'lb_global');
+        await i.editReply(updatedBoard); 
+
+    } catch (error) {
+        console.error("Leaderboard Button Error:", error);
+    }
+});
+
 
             collector.on('end', () => response.edit({ components: [] }).catch(() => null));
         } catch (error) {
