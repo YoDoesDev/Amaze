@@ -23,7 +23,7 @@ module.exports = {
         const mins = Math.floor((remaining % 3600000) / 60000);
         
         const timeLeft = hrs > 0 ? `${hrs}h ${mins}m` : (mins > 0 ? `${mins}m` : "less than a minute");
-        return interaction.ediReply(`Be patient! You can claim your daily in **${timeLeft}**.`);
+        return interaction.editReply(`Be patient! You can claim your daily in **${timeLeft}**.`);
       }
 
       // 3. Update or Insert Data
