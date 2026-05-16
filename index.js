@@ -1,6 +1,6 @@
 // Automated Deploy Active: May 2026.
 // Amaze Bot - Optimized for Performance and Scalability
-
+ 
 // --- 1. EXTERNAL DEPENDENCIES ---
 const { 
     Client, 
