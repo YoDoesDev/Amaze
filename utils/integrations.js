@@ -6,10 +6,13 @@ module.exports = {
     if (process.env.TOPGG_TOKEN) {
       // 1. Top.gg Autoposter
       const ap = AutoPoster(process.env.TOPGG_TOKEN, client);
-      ap.on('posted', () => {
+      try{
+        ap.on('posted', () => {
         console.log('>>> [TOP.GG] Stats synced successfully!');
-      });
-
+        });
+      }catch (err) {
+         console.log("Top.gg is acting up again, skipping this update...");
+      }
       
       // 2. Vote Webhook Route
       app.post('/votereward', (req, res) => {
