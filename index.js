@@ -19,7 +19,7 @@ const { initDb, db } = require('./utils/database.js');
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands, loadSlashCommands} = require('./utils/Index/cmdLoader.js');
 const { handleCooldown } = require('./utils/cooldowns.js');
-const { autoMsg } = require('./utils/Index/automsg.js');
+const { autoMsg } = require('./utils/Index/autoMsg.js');
 const { setupIntegrations } = require('./utils/Index/integrations.js');
 const { slashReg } = require('./utils/Index/slash-deploy.js');
 const { execute } = require("./utils/eval.js");
