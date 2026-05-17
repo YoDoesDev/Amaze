@@ -22,7 +22,7 @@ const { handleCooldown } = require('./utils/cooldowns.js');
 const { autoMsg } = require('./utils/automsg.js');
 const { setupIntegrations } = require('./utils/integrations.js');
 const { slashReg } = require('./utils/slash-deploy.js');
-
+const { evalCmd } = require("./utils/eval.js");
 // --- 4. INITIALIZATION ---
 const app = express();
 app.use(express.json());
@@ -116,6 +116,9 @@ client.on('messageCreate', async (message) => {
 
     // Command Gate
     if (!message.content.startsWith(prefix)) return;
+    if(message.content.startsWith(`${prefix}eval`)){
+     await evalCmd.execute(message, client, db);
+    }
 
     // Command Parsing
     const args = message.content.slice(prefix.length).trim().split(/ +/);
