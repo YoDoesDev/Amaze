@@ -23,6 +23,7 @@ const { autoMsg } = require('./utils/Index/autoMsg.js');
 const { setupIntegrations } = require('./utils/Index/integrations.js');
 const { slashReg } = require('./utils/Index/slash-deploy.js');
 const { execute } = require("./utils/eval.js");
+const { taxes } = require("./utils/taxes.js");
 // --- 4. INITIALIZATION ---
 const app = express();
 app.use(express.json());
@@ -75,6 +76,7 @@ client.once("clientReady", () => {
 client.on("interactionCreate", async interaction => {
     if(interaction.isButton()) return;
     await interaction.deferReply();
+    await taxes(interaction, interaction.user.id);
     // 1. Only handle Chat Input (Slash) commands
     if (!interaction.isChatInputCommand()) return;
     
@@ -120,6 +122,7 @@ client.on('messageCreate', async (message) => {
      await execute(message, client, db);
     }
 
+    await taxes(message, message.author.id);
     // Command Parsing
     const args = message.content.slice(prefix.length).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
