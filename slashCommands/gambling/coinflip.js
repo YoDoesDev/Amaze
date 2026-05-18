@@ -41,6 +41,10 @@ module.exports = {
       if (monie < amt) {
         return interaction.editReply(`You don't have enough ${emojis.amash} Amash! You only have **${monie}**.`);
       }
+     
+      if(monie > 250000){
+        return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
+}
 
       // 2. Logic Setup
       const effectiveStones = Math.min(stones, 20);
