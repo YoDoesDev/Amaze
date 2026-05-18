@@ -11,7 +11,7 @@ module.exports = {
   .setTitle("🏛️ Server Tax System Guide")
   .setColor("#FF5555")
   .setDescription(
-    "To prevent massive inflation and keep our server economy balanced, a **Daily Tiered Wealth Tax** is automatically applied when you chat or use commands."
+    "To prevent massive inflation and keep our server economy balanced, a **Monthly Tiered Wealth Tax** is automatically applied when you chat or use commands."
   )
   .addFields(
     { 
