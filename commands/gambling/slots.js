@@ -34,7 +34,7 @@ module.exports = {
 
     // 3. Setup the Reels
     const slotEmojis = [
-      "🍀", "🔥", "✨", "💦", "💎", "💦", "🔥", "🔥", "🏮", "🍀", "❤", "💦", "🏮", "✨", "❤", ":phoenix:"
+       "🔥", "✨", "💦", "💦", "🔥", "🔥", "🏮", "❤", "💦", "🏮", "✨", "❤", ":phoenix:"
     ];
 
     const jackpotPayouts = { 
@@ -43,9 +43,7 @@ module.exports = {
       "✨": 6.5,
       "🏮": 7,
       "❤": 6.5,
-      "🍀": 10, 
-      "💎": 20,
-      ":phoenix:": 20
+      ":phoenix:": 15
     };
 
     const roll = () => {
