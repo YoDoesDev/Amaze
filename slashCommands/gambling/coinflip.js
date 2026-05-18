@@ -42,7 +42,7 @@ module.exports = {
         return interaction.editReply(`You don't have enough ${emojis.amash} Amash! You only have **${monie}**.`);
       }
      
-      if(monie > 250000){
+     if(amt > 250000){
         return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
 }
 
