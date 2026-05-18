@@ -3,10 +3,10 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 // Import your config/token
-const { clientId, guildId } = require('./config.js'); 
+const { clientId, guildId } = require('../config.js'); 
 
 const commands = [];
-const slashPath = path.join(__dirname, '../slashCommands');
+const slashPath = path.join(__dirname, '../../slashCommands');
 
 // 1. Logic to grab all command data (matches your loader logic)
 const slashFolders = fs.readdirSync(slashPath);

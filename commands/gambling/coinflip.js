@@ -41,7 +41,7 @@ module.exports = {
     // 4. Game Setup, MAX chance 75% setting EVmax to 1.5
     call = call.startsWith("h") ? "heads" : "tails";
     const effectiveStones = Math.min(stones, 20);
-    const winChance = 0.5 + (0.0125 * effectiveStones);
+    const winChance = 0.5 + (0.005 * effectiveStones);
 
     // 5. Execution & Animation
     // We send the flipping message and store it in 'msg'

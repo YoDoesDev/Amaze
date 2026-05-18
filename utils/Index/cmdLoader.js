@@ -4,7 +4,7 @@ const path = require('path');
 module.exports = {
     // --- PREFIX COMMAND LOADER ---
     loadCommands: (client) => {
-        const foldersPath = path.join(__dirname, '../commands');
+        const foldersPath = path.join(__dirname, '../../commands');
         if (!fs.existsSync(foldersPath)) return console.log(">>> [ERR] Prefix folder not found.");
 
         const commandFolders = fs.readdirSync(foldersPath);
@@ -40,7 +40,7 @@ module.exports = {
 
     // --- SLASH COMMAND LOADER ---
     loadSlashCommands: (client) => {
-        const slashPath = path.join(__dirname, '../slashCommands');
+        const slashPath = path.join(__dirname, '../../slashCommands');
         if (!fs.existsSync(slashPath)) return console.log(">>> [ERR] Slash folder not found.");
 
         const slashFolders = fs.readdirSync(slashPath);
