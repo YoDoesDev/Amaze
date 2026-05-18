@@ -11,7 +11,7 @@ const taxes = async (medium, author) => {
     ON CONFLICT (userid) DO UPDATE SET last_taxed_at = excluded.last_taxed_at`).run(self, 0, now);
   }
   
-  const daysUntaxed = Math.floor((now - lastTaxed)/(24 * 60 * 60 * 1000)) == 0? 0:1;
+  const daysUntaxed = Math.floor((now - lastTaxed)/(30 * 24 * 60 * 60 * 1000)) == 0? 0:1;
   
   if(daysUntaxed == 0) return;
   
