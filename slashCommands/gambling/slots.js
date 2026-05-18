@@ -32,6 +32,10 @@ module.exports = {
         return interaction.editReply(`You don't have enough ${emojis.amash}! You only have **${balData.bucks}**.`);
       }
 
+    if(balData.bucks > 250000){
+        return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
+}
+
       // 2. Setup the Reels
           const slotEmojis = [
        "🐐", "🐧", "🐱", "🦅", "🐐", "🐧", "🐱", "🦅", "🐐", "🦅", "🐧", ":phoenix:", ":phoenix:"
