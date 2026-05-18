@@ -25,14 +25,14 @@ const taxes = async (medium, author) => {
   } else if(monie < 21000){
     taxPM = 0.05;
   } else if(monie < 26000){
-    taxPDay = 0.07;
-  } else if(monie < 1000000){
-    taxPDay = 0.1;
+    taxPM = 0.07;
+  } else if(monie < 100000){
+    taxPM = 0.08;
   } else{
-    taxPDay = 0.15;
+    taxPM = 0.1;
   }
   
-  if(taxPDay == 0) return;
+  if(taxPM == 0) return;
   
   const monieToRemove = Math.round(monie * taxPM);
   
