@@ -24,7 +24,7 @@ const taxes = async (medium, author) => {
     taxPM = 0.02;
   } else if(monie < 21000){
     taxPM = 0.05;
-  } else if(monie < 250000){
+  } else if(monie < 26000){
     taxPDay = 0.07;
   } else if(monie < 1000000){
     taxPDay = 0.1;
