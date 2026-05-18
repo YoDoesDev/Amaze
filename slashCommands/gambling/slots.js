@@ -33,14 +33,17 @@ module.exports = {
       }
 
       // 2. Setup the Reels
-      const slotEmojis = [
-        "🍎", "🍎", "🍎", "🍎", // common
-        "☘️", "☘️", "☘️",       // rare
-        "🍀", "🍀",             // super rare
-        "💎"                    // mythic
-      ];
+          const slotEmojis = [
+       "🐐", "🐧", "🐱", "🦅", "🐐", "🐧", "🐱", "🦅", "🐐", "🦅", "🐧", ":phoenix:", ":phoenix:"
+    ];
 
-      const jackpotPayouts = { "🍎": 3.2, "☘️": 6.5, "🍀": 11, "💎": 22 };
+    const jackpotPayouts = { 
+      "🦅": 3.2, 
+      "🐐": 4,
+      "🐧": 6.5,
+      "🐱": 7,
+      ":phoenix:": 12
+    };
       
       const roll = () => slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
       const r1 = roll(), r2 = roll(), r3 = roll();
