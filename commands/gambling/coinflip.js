@@ -33,6 +33,10 @@ module.exports = {
       if(monie < amt){
         return message.reply(`You don't have enough ${emojis.amash} Amash!`);
       }
+
+     if(amt > 250000){
+        return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
+}
     } catch(err) {
       console.error(err);
       return message.reply("A Database error occurred.");
