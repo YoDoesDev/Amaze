@@ -32,15 +32,23 @@ module.exports = {
         return interaction.editReply(`You don't have enough ${emojis.amash}! You only have **${balData.bucks}**.`);
       }
 
-      // 2. Setup the Reels
-      const slotEmojis = [
-        "🍎", "🍎", "🍎", "🍎", // common
-        "☘️", "☘️", "☘️",       // rare
-        "🍀", "🍀",             // super rare
-        "💎"                    // mythic
-      ];
+   if(!interaction.guild.id == "1499416975531573429") {
+     if(amt > 250000){
+        return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
+}}
 
-      const jackpotPayouts = { "🍎": 3.2, "☘️": 6.5, "🍀": 11, "💎": 22 };
+      // 2. Setup the Reels
+          const slotEmojis = [
+       "🐐", "🐧", "🐱", "🦅", "🐐", "🐧", "🐱", "🦅", "🐐", "🦅", "🐧", ":phoenix:", ":phoenix:"
+    ];
+
+    const jackpotPayouts = { 
+      "🦅": 3.2, 
+      "🐐": 4,
+      "🐧": 6.5,
+      "🐱": 7,
+      ":phoenix:": 12
+    };
       
       const roll = () => slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
       const r1 = roll(), r2 = roll(), r3 = roll();
