@@ -32,9 +32,10 @@ module.exports = {
         return interaction.editReply(`You don't have enough ${emojis.amash}! You only have **${balData.bucks}**.`);
       }
 
-   if(amt > 250000){
+   if(!interaction.guild.id == "1499416975531573429") {
+     if(amt > 250000){
         return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
-}
+}}
 
       // 2. Setup the Reels
           const slotEmojis = [
