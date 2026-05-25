@@ -1,0 +1,4 @@
+app = "your-fly-app-name"
+primary_region = "bom"
+
+[build]
