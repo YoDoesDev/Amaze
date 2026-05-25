@@ -6,8 +6,6 @@ const Database = require('better-sqlite3'); // Or your specific sqlite package
 // We use '..' to go out of the 'utils' folder and find the file in the root
 const db = new Database(path.join(__dirname, '..', 'amaze.sqlite'), {});
 
-module.exports = { db };
-
 
 console.log('>>> [DATABASE] Connected to amaze.sqlite (Better-SQLite3).');
 
