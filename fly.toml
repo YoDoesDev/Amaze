@@ -1,4 +1,4 @@
-app = "your-fly-app-name"
+app = "amaze-v1.2"
 primary_region = "bom"
 
 [build]
