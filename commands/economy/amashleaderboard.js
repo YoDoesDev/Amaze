@@ -12,16 +12,28 @@ module.exports = {
         try {
             // Function to generate the board data (Embed + Buttons)
             const createBoard = async (isGlobal) => {
-                const allData = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
-                
-                let data;
+                let data = [];
+
                 if (isGlobal) {
-                    data = allData.slice(0, 10);
+                    // Fetch top 10 globally straight from database
+                    data = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 10`).all();
                 } else {
-                    const topIds = allData.map(r => r.userid);
-                    const fetchedMembers = await message.guild.members.fetch({ user: topIds }).catch(() => new Map());
-                    const guildMemberIds = Array.from(fetchedMembers.keys());
-                    data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
+                    // 1. Fetch top 100 from database to have a healthy buffer zone
+                    const potentialTopRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+                    
+                    // 2. Filter down to members who are actually in this server right now
+                    for (const row of potentialTopRows) {
+                        if (data.length >= 10) break; // We only need the top 10 display slots filled
+                        
+                        try {
+                            // Check if the user exists in the cache or fetch them individually (highly reliable)
+                            const member = message.guild.members.cache.get(row.userid) || await message.guild.members.fetch(row.userid);
+                            if (member) data.push(row);
+                        } catch {
+                            // User is not in this guild, skip them cleanly
+                            continue;
+                        }
+                    }
                 }
 
                 const list = data.length 
@@ -79,7 +91,6 @@ module.exports = {
 
                 } catch (error) {
                     console.error("Amash LB Button Error:", error);
-                    // Fallback if the interaction is still alive but update failed
                     if (!i.replied && !i.deferred) {
                         await i.reply({ content: "Could not switch views.", ephemeral: true });
                     }
