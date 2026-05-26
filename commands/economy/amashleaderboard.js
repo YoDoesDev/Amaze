@@ -10,40 +10,43 @@ module.exports = {
 
     async execute(message) {
         try {
-            // Function to generate the board data (Embed + Buttons)
-            const createBoard = async (isGlobal) => {
-                let data = [];
+            // =======================================================
+            // 1. PRE-COMPUTE DATA BEFORE INITIAL RESPONSE (NO INTERACTION LAG)
+            // =======================================================
+            
+            // --- Global Data Setup ---
+            const globalRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 10`).all();
+            const globalList = globalRows.length 
+                ? globalRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
+                : "No wealthy users found in this view.";
 
-                if (isGlobal) {
-                    // Fetch top 10 globally straight from database
-                    data = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 10`).all();
-                } else {
-                    // 1. Fetch top 100 from database to have a healthy buffer zone
-                    const potentialTopRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
-                    
-                    // 2. Filter down to members who are actually in this server right now
-                    for (const row of potentialTopRows) {
-                        if (data.length >= 10) break; // We only need the top 10 display slots filled
-                        
-                        try {
-                            // Check if the user exists in the cache or fetch them individually (highly reliable)
-                            const member = message.guild.members.cache.get(row.userid) || await message.guild.members.fetch(row.userid);
-                            if (member) data.push(row);
-                        } catch {
-                            // User is not in this guild, skip them cleanly
-                            continue;
-                        }
-                    }
+            // --- Server Data Setup ---
+            const potentialTopRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+            const potentialIds = potentialTopRows.map(r => r.userid);
+            
+            // Single API call to check who is present in this guild
+            const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
+            
+            let serverRows = [];
+            for (const row of potentialTopRows) {
+                if (serverRows.length >= 10) break;
+                if (fetchedMembers.has(row.userid)) {
+                    serverRows.push(row);
                 }
+            }
 
-                const list = data.length 
-                    ? data.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
-                    : "No wealthy users found in this view.";
+            const serverList = serverRows.length 
+                ? serverRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
+                : "No wealthy users found in this view.";
 
+            // =======================================================
+            // 2. HELPER FUNCTION TO GENERATE COLD VIEW STRUCTURES
+            // =======================================================
+            const generateView = (isGlobal) => {
                 const embed = new EmbedBuilder()
                     .setColor(isGlobal ? '#FEE75C' : '#5865F2')
                     .setTitle(isGlobal ? `🌐 Global Wealth Rankings` : `💰 ${message.guild.name} Wealth Rankings`)
-                    .setDescription(list)
+                    .setDescription(isGlobal ? globalList : serverList)
                     .setFooter({ text: `Requested By: ${message.author.tag}` })
                     .setTimestamp();
 
@@ -63,43 +66,38 @@ module.exports = {
                 return { embeds: [embed], components: [buttons] };
             };
 
-            // Initial view (Server)
-            const initialView = await createBoard(false);
-            const response = await message.reply(initialView);
+            // Initial launch display (Starts on Server view)
+            const response = await message.reply(generateView(false));
 
-            // Collector for button interactions
+            // =======================================================
+            // 3. COLLECTOR LOOP (COMPLETELY LOCAL & INSTANTANEOUS)
+            // =======================================================
             const collector = response.createMessageComponentCollector({ 
                 componentType: ComponentType.Button, 
                 time: 60000 
             });
 
             collector.on('collect', async i => {
-                // 1. Authorization check
                 if (i.user.id !== message.author.id) {
                     return i.reply({ content: "This vault is restricted to the original requester!", ephemeral: true });
                 }
 
                 try {
-                    // 2. Determine view based on button clicked
                     const isGlobal = i.customId === 'amash_global';
-
-                    // 3. Generate the new board content FIRST
-                    const nextView = await createBoard(isGlobal);
-
-                    // 4. Use i.update to swap the message content instantly
-                    await i.update(nextView);
+                    
+                    // We generate the layout and update directly in one clean swoop!
+                    await i.update(generateView(isGlobal));
 
                 } catch (error) {
                     console.error("Amash LB Button Error:", error);
-                    if (!i.replied && !i.deferred) {
-                        await i.reply({ content: "Could not switch views.", ephemeral: true });
-                    }
                 }
             });
 
-            // Remove buttons when finished to save bot resources
+            // Clean exit layout handler
             collector.on('end', () => {
-                response.edit({ components: [] }).catch(() => null);
+                if (collector.message) {
+                    response.edit({ components: [] }).catch(() => null);
+                }
             });
 
         } catch (error) {
