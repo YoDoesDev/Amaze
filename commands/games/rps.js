@@ -33,13 +33,13 @@ module.exports = {
         .setDescription("Correct Syntax: `!rps <rounds> [@user]`")
       ]})
     }
-    
+    /*
     const tics = db.prepare(`SELECT tickets FROM inventory WHERE userid = ?`).get(message.author.id);
     
     if(tics.tickets < 1){
       return message.reply("You don't have enough tickets to play this game. Buy it from the shop!");
     }
-    
+    */
     if(ongGames.has(message.channel.id)){
       return message.reply("There is already a game going on in this channel. Try somewhere else maybe?");
     }
