@@ -68,6 +68,7 @@ module.exports = {
       const challEmbed = new EmbedBuilder()
     .setTitle("Challenge incoming!")
     .setDescription(`<@${target.id}>, <@${message.author.id}> challenges you to a game of Rock, Raper and Scissors. Do you wanna accept or decline?`)
+    .setColor('#A20FB7')
     .setTimestamp();
     
     const challRow = new ActionRowBuilder().addComponents(
