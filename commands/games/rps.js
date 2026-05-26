@@ -86,6 +86,7 @@ module.exports = {
     );
     
     const askMessage = await message.reply({
+      content: `<@${target.id}>`, 
       embeds: [challEmbed], 
       components: [challRow]
     });
