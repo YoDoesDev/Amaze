@@ -67,7 +67,7 @@ module.exports = {
     if(game.opp != "bot"){
       const challEmbed = new EmbedBuilder()
     .setTitle("Challenge incoming!")
-    .setDescription(`<@${target.id}>, <@${message.author.id}> challenges you to a game of Rock, Raper and Scissors. Do you wanna accept or decline?`)
+    .setDescription(`<@${target.id}>, <@${message.author.id}> challenges you to a game of Rock, Paper and Scissors. Do you wanna accept or decline?`)
     .setColor('#A20FB7')
     .setTimestamp();
     
