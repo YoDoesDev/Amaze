@@ -7,7 +7,7 @@ const ongGames = new Map();
 module.exports = {
   name: "rps", 
   category: "Games", 
-  description: "Play rock paper scissors with friends or a bot.\n\nSyntax: `!rps <rounds> [@user/bot]`\n<> = REQUIRED", 
+  description: "Play rock paper scissors with friends or a bot(WIP).\n\nSyntax: `!rps <rounds> [@user/bot]`\n<> = REQUIRED", 
   cooldown: 10,
   async execute(message, args){
     const game = {
@@ -65,6 +65,7 @@ module.exports = {
     game.channel = message.channel.id;
     
     if(game.opp != "bot"){
+      ongGames.set(message.channel.id, game);
       const challEmbed = new EmbedBuilder()
     .setTitle("Challenge incoming!")
     .setDescription(`<@${target.id}>, <@${message.author.id}> challenges you to a game of Rock, Paper and Scissors. Do you wanna accept or decline?`)
@@ -102,6 +103,7 @@ module.exports = {
   await interaction.deferUpdate();
 
   if (interaction.customId === "decline") {
+    ongGames.delete(message.channel.id);
     return askMessage.edit({ content: "Challenge declined!", embeds: [], components: [] });
   }
 
@@ -110,6 +112,7 @@ module.exports = {
 
 } catch (err) {
   // If they don't click within 2 minutes, it automatically jumps here
+  ongGames.delete(message.channel.id);
   return askMessage.edit({ content: "⌛ Match timed out!", embeds: [], components: [] });
 }
 
