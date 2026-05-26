@@ -45,7 +45,6 @@ module.exports = {
     }
     
     const target = message.mentions.users.first();
-    let target = message.mentions.users.first();
 
     if (args[1].toLowerCase() === 'bot') {
       game.opp = "bot";
