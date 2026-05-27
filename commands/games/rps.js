@@ -1,8 +1,6 @@
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, ComponentType } = require('discord.js');
 const { emojis } = require('../../utils/config.js');
 const { db } = require('../../utils/database.js');
-
-// Holds active game configurations per channel
 const ongGames = new Map();
 
 module.exports = {
@@ -256,3 +254,5 @@ async function runGameEngine(message, game) {
     }, 3500);
   });
 }
+
+
