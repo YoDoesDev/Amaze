@@ -99,10 +99,12 @@ module.exports = {
                     response.edit({ components: [] }).catch(() => null);
                 }
             });
-
+            
         } catch (error) {
             console.error(">>> [CRITICAL] Amash Leaderboard Error:", error);
             message.reply("The vault is currently locked. Could not load rankings.");
         }
     }
 };
+
+
