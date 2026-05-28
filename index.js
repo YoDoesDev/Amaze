@@ -7,7 +7,8 @@ const {
     Collection, 
     GatewayIntentBits, 
     ActivityType, 
-    Options 
+    Options, 
+    Partials
 } = require('discord.js');
 const express = require('express');
 require('dotenv').config();
