@@ -119,7 +119,7 @@ client.on('messageCreate', async (message) => {
     // Basic Gates
     if (message.author.bot) return;
     
-    const prefix = getPrefix(message.guild.id)? getPrefix(message.guild.id) : "!";
+    const prefix = getPrefix(message.guild?.id) || "!";
 
     // Run Auto-Replies (thx, fk u, etc.)
     autoMsg(message, prefix);
