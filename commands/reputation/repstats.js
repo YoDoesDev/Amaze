@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js'); 
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'repstats',
@@ -13,7 +14,7 @@ module.exports = {
 
             // 1. Fetch points (Synchronous & Direct)
             // No callback needed; the code waits here until db returns the row.
-            const row = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
+            const row = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
             
             const points = row?.points ?? 0;
 
@@ -28,6 +29,7 @@ module.exports = {
 
         } catch (error) {
             console.error(">>> [CRITICAL] RepStats Execution crashed:", error);
+            clearCooldown(message.author.id, module.exports);
             message.reply("Could not retrieve reputation data at this moment.");
         }
     }

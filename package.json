@@ -2,10 +2,12 @@
   "name": "amaze-bot",
   "version": "1.1.0",
   "main": "index.js",
+  "type": "commonjs", 
   "dependencies": {
-    "discord.js": "^14.26.3",
+    "better-sqlite3": "^12.10.0",
+    "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "better-sqlite3": "^11.0.0"
+    "topgg-autoposter": "^2.0.2"
   }
 }

@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'buystocks',
@@ -71,6 +72,7 @@ module.exports = {
 
         } catch (err) {
             console.error("BuyStocks Error:", err);
+            clearCooldown(message.author.id, module.exports);
             message.reply("A database error occurred during the transaction.");
         }
     }

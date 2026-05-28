@@ -27,6 +27,11 @@ module.exports = {
       if (monie < amt) {
         return message.reply(`You don't have enough ${emojis.amash}!`);
       }
+      if(!message.guild.id == "1499416975531573429"){
+      if(amt > 250000){
+        return message.reply(`The maximum amount to gamble is 250,000 at a time!`);
+}
+}
     } catch (err) {
       console.log(err);
       return message.reply("A Database error occurred while checking amash.");
@@ -34,17 +39,15 @@ module.exports = {
 
     // 3. Setup the Reels
     const slotEmojis = [
-      "🍎", "🍎", "🍎", "🍎", // common
-      "☘️", "☘️", "☘️",       // rare
-      "🍀", "🍀",             // super rare
-      "💎"                    // mythic
+       "🐐", "🐧", "🐱", "🦅", "🐐", "🐧", "🐱", "🦅", "🐐", "🦅", "🐧", ":phoenix:", ":phoenix:"
     ];
 
     const jackpotPayouts = { 
-      "🍎": 3.2, 
-      "☘️": 6.5, 
-      "🍀": 11, 
-      "💎": 22 
+      "🦅": 3.2, 
+      "🐐": 4,
+      "🐧": 6.5,
+      "🐱": 7,
+      ":phoenix:": 12
     };
 
     const roll = () => {

@@ -1,96 +1,110 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
 const { db } = require('../../utils/database.js');
 
 module.exports = {
     name: 'amashleaderboard',
     category: 'Economy',
-    aliases: ['amashlb', 'alb', 'baltop', `al`],
+    aliases: ['amashlb', 'alb', 'baltop', 'al'],
     cooldown: 30,
-    description: 'Shows the wealthiest users with a Global/Server toggle.',
+    description: 'Wealth rankings with a Global/Server toggle.',
 
     async execute(message) {
         try {
-            // 1. Setup the Buttons
-            const getButtons = (isGlobal) => {
-                return new ActionRowBuilder().addComponents(
+            // =======================================================
+            // 1. PRE-COMPUTE DATA BEFORE INITIAL RESPONSE (NO INTERACTION LAG)
+            // =======================================================
+            
+            // --- Global Data Setup ---
+            const globalRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 10`).all();
+            const globalList = globalRows.length 
+                ? globalRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
+                : "No wealthy users found in this view.";
+
+            // --- Server Data Setup ---
+            const potentialTopRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+            const potentialIds = potentialTopRows.map(r => r.userid);
+            
+            // Single API call to check who is present in this guild
+            const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
+            
+            let serverRows = [];
+            for (const row of potentialTopRows) {
+                if (serverRows.length >= 10) break;
+                if (fetchedMembers.has(row.userid)) {
+                    serverRows.push(row);
+                }
+            }
+
+            const serverList = serverRows.length 
+                ? serverRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
+                : "No wealthy users found in this view.";
+
+            // =======================================================
+            // 2. HELPER FUNCTION TO GENERATE COLD VIEW STRUCTURES
+            // =======================================================
+            const generateView = (isGlobal) => {
+                const embed = new EmbedBuilder()
+                    .setColor(isGlobal ? '#FEE75C' : '#5865F2')
+                    .setTitle(isGlobal ? `🌐 Global Wealth Rankings` : `💰 ${message.guild.name} Wealth Rankings`)
+                    .setDescription(isGlobal ? globalList : serverList)
+                    .setFooter({ text: `Requested By: ${message.author.tag}` })
+                    .setTimestamp();
+
+                const buttons = new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId('amash_server')
                         .setLabel('Server')
-                        .setStyle(ButtonStyle.Primary)
+                        .setStyle(isGlobal ? ButtonStyle.Primary : ButtonStyle.Secondary)
                         .setDisabled(!isGlobal),
                     new ButtonBuilder()
                         .setCustomId('amash_global')
                         .setLabel('Global')
-                        .setStyle(ButtonStyle.Secondary)
+                        .setStyle(!isGlobal ? ButtonStyle.Primary : ButtonStyle.Secondary)
                         .setDisabled(isGlobal)
                 );
+
+                return { embeds: [embed], components: [buttons] };
             };
 
-            // 2. Fetch Server Members for filtering
-            const members = await message.guild.members.fetch();
-            const memberIds = Array.from(members.keys());
+            // Initial launch display (Starts on Server view)
+            const response = await message.reply(generateView(false));
 
-            // 3. Data Processing Function for Economy
-            const generateLB = (isGlobal) => {
-                // Ensure the table/column names match your 'amaze.sqlite' schema
-                // Based on previous chats, your currency table is 'users' and column is 'bucks'
-                const allData = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC`).all();
-                
-                const data = isGlobal 
-                    ? allData.slice(0, 10) 
-                    : allData.filter(row => memberIds.includes(row.userid)).slice(0, 10);
-
-                if (!data.length) return 'No millionaires found in this view.';
-
-                return data.map((row, index) => {
-                    return `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`;
-                }).join('\n');
-            };
-
-            // 4. Initial Embed (Defaulting to Server LB)
-            const embed = new EmbedBuilder()
-                .setColor(0x5865F2)
-                .setTitle(`💰 ${message.guild.name} Wealth Rankings`)
-                .setDescription(generateLB(false))
-                .setFooter({ text: `Requested By: ${message.author.tag}` })
-                .setTimestamp();
-
-            const response = await message.channel.send({ 
-                embeds: [embed], 
-                components: [getButtons(false)] 
+            // =======================================================
+            // 3. COLLECTOR LOOP (COMPLETELY LOCAL & INSTANTANEOUS)
+            // =======================================================
+            const collector = response.createMessageComponentCollector({ 
+                componentType: ComponentType.Button, 
+                time: 60000 
             });
-
-            // 5. Interaction Collector
-            const collector = response.createMessageComponentCollector({ time: 60000 });
 
             collector.on('collect', async i => {
                 if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "Run the command yourself to flip the pages!", ephemeral: true });
+                    return i.reply({ content: "This vault is restricted to the original requester!", ephemeral: true });
                 }
 
-                const showGlobal = i.customId === 'amash_global';
+                try {
+                    const isGlobal = i.customId === 'amash_global';
+                    
+                    // We generate the layout and update directly in one clean swoop!
+                    await i.update(generateView(isGlobal));
 
-                const updatedEmbed = new EmbedBuilder()
-                    .setColor(showGlobal ? 0xFEE75C : 0x5865F2)
-                    .setTitle(showGlobal ? `🌐 Global Wealth Leaderboard` : `💰 ${message.guild.name} Wealth Rankings`)
-                    .setDescription(generateLB(showGlobal))
-                    .setFooter({ text: `Requested By: ${message.author.tag}` })
-                    .setTimestamp();
-
-                await i.update({ 
-                    embeds: [updatedEmbed], 
-                    components: [getButtons(showGlobal)] 
-                });
+                } catch (error) {
+                    console.error("Amash LB Button Error:", error);
+                }
             });
 
-            // Cleanup: Remove buttons after 1 minute
+            // Clean exit layout handler
             collector.on('end', () => {
-                response.edit({ components: [] }).catch(() => null);
+                if (collector.message) {
+                    response.edit({ components: [] }).catch(() => null);
+                }
             });
-
+            
         } catch (error) {
             console.error(">>> [CRITICAL] Amash Leaderboard Error:", error);
-            message.reply("The vault is currently locked. Could not load the leaderboard.");
+            message.reply("The vault is currently locked. Could not load rankings.");
         }
     }
 };
+
+

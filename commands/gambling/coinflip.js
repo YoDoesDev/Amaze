@@ -33,6 +33,12 @@ module.exports = {
       if(monie < amt){
         return message.reply(`You don't have enough ${emojis.amash} Amash!`);
       }
+
+     if(!message.guild.id == "1499416975531573429"){
+      if(amt > 250000){
+        return message.reply(`The maximum amount to gamble is 250,000 at a time!`);
+}
+}
     } catch(err) {
       console.error(err);
       return message.reply("A Database error occurred.");
@@ -41,7 +47,7 @@ module.exports = {
     // 4. Game Setup
     call = call.startsWith("h") ? "heads" : "tails";
     const effectiveStones = Math.min(stones, 20);
-    const winChance = 0.5 + (0.0125 * effectiveStones);
+    const winChance = 0.5 + (0.005 * effectiveStones);
 
     // 5. Execution & Animation
     // We send the flipping message and store it in 'msg'

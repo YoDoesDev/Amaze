@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
   name: 'inventory', 
@@ -47,6 +48,7 @@ module.exports = {
 
     } catch (err) {
       console.error("Inventory Error:", err);
+      clearCooldown(message.author.id, module.exports);
       return message.reply("A database error occurred while checking your inventory.");
     }
   }

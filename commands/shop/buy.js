@@ -1,5 +1,6 @@
 const { db } = require('../../utils/database.js');
 const { items } = require('./shop.js');
+const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
     name: 'buy',
@@ -69,6 +70,7 @@ module.exports = {
 
         } catch (err) {
             console.error("Buy Command Error:", err);
+            clearCooldown(message.author.id, module.exports);
             message.reply("An error occurred while processing your purchase.");
         }
     }

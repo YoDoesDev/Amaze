@@ -1,18 +1,21 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/cooldowns.js");
 
 module.exports = {
-    name: 'repleaderboard',
+    data: new SlashCommandBuilder()
+        .setName("repleaderboard")
+        .setDescription("View Global or Server-wide reputation rankings"),
     category: 'Reputation',
-    aliases: ['replb', 'rl'],
     cooldown: 30,
-    description: 'Toggle between Global and Server rankings.',
 
-    async execute(message) {
+    async execute(interaction) {
+        const authorId = interaction.user.id;
+
         try {
-            // Function to generate the embed and buttons
+            // Function to generate the board content
             const createLeaderboard = async (isGlobal) => {
+                // Fetch top 100 once to keep it efficient
                 const allData = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC LIMIT 100`).all();
                 
                 let data;
@@ -20,7 +23,8 @@ module.exports = {
                     data = allData.slice(0, 10);
                 } else {
                     const topIds = allData.map(r => r.userid);
-                    const fetchedMembers = await message.guild.members.fetch({ user: topIds }).catch(() => new Map());
+                    // Fetching members in the current guild from the top 100 list
+                    const fetchedMembers = await interaction.guild.members.fetch({ user: topIds }).catch(() => new Map());
                     const guildMemberIds = Array.from(fetchedMembers.keys());
                     data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
                 }
@@ -31,9 +35,9 @@ module.exports = {
 
                 const embed = new EmbedBuilder()
                     .setColor(isGlobal ? '#FEE75C' : '#5865F2')
-                    .setTitle(isGlobal ? `🌐 Global Reputation` : `🏆 ${message.guild.name} Rankings`)
+                    .setTitle(isGlobal ? `🌐 Global Reputation` : `🏆 ${interaction.guild.name} Rankings`)
                     .setDescription(list)
-                    .setFooter({ text: `Requested by ${message.author.tag}` })
+                    .setFooter({ text: `Requested by ${interaction.user.tag}` })
                     .setTimestamp();
 
                 const buttons = new ActionRowBuilder().addComponents(
@@ -52,49 +56,43 @@ module.exports = {
                 return { embeds: [embed], components: [buttons] };
             };
 
-            // Initial Send
+            // 1. Initial Send (Server view by default)
             const initialBoard = await createLeaderboard(false);
-            const response = await message.reply(initialBoard);
+            const response = await interaction.editReply(initialBoard);
 
-            // Collector
+            // 2. Collector setup (using the message object returned from editReply)
             const collector = response.createMessageComponentCollector({ 
                 componentType: ComponentType.Button, 
                 time: 60000 
             });
 
             collector.on('collect', async i => {
-                // 1. Safety Gate
-                if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "This isn't your menu!", ephemeral: true });
+                // Ensure only the person who ran the command can flip pages
+                if (i.user.id !== authorId) {
+                    return i.reply({ content: "This isn't your menu! Run `/repleaderboard` to see your own.", ephemeral: true });
                 }
 
                 try {
-                    // 2. The Logic: Determine if Global was clicked
                     const isGlobal = i.customId === 'lb_global';
-                    
-                    // 3. Generate new content FIRST
                     const nextBoard = await createLeaderboard(isGlobal);
 
-                    // 4. Update the message instantly
+                    // Acknowledge the button press and update the embed simultaneously
                     await i.update(nextBoard);
 
                 } catch (error) {
                     console.error("Leaderboard Button Error:", error);
-                    if (!i.replied && !i.deferred) {
-                        await i.reply({ content: "Error updating leaderboard.", ephemeral: true });
-                    }
                 }
             });
 
-            // Clean up buttons when done
+            // 3. Clean up: Remove buttons when the collector expires (1 minute)
             collector.on('end', () => {
-                response.edit({ components: [] }).catch(() => null);
+                interaction.editReply({ components: [] }).catch(() => null);
             });
 
         } catch (error) {
-            console.error(error);
-            clearCooldown(message.author.id, module.exports);
-            message.reply("Leaderboard error.");
+            console.error("Leaderboard Main Error:", error);
+            clearCooldown(authorId, module.exports);
+            return interaction.editReply("An error occurred while loading the leaderboard.");
         }
     }
 };

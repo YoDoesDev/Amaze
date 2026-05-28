@@ -4,7 +4,7 @@ module.exports = {
     name: 'defame',
     category: 'Reputation', 
     cooldown: 10,
-    description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>`',
+    description: 'Defame a user with a 8-hour cooldown per person.\n\nSyntax: `!defame <@user>\n\n(Costs 100 Amash in selected servers)`',
     async execute(message, args) { 
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
@@ -44,19 +44,28 @@ module.exports = {
             db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
 
             // Update Reputation
-            db.prepare(`INSERT OR IGNORE INTO reputation (user_id, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points - ? WHERE user_id = ?`).run(multiplier, targetUser.id);
+            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
+            db.prepare(`UPDATE reputation SET points = points - ? WHERE userid = ?`).run(multiplier, targetUser.id);
 
+            
             // Impact investors (The "Stock Market" crash logic)
-            db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
-
+            
+              db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
+              
+            
             // 5. Fetch final points for the response
-            const finalRep = db.prepare(`SELECT points FROM reputation WHERE user_id = ?`).get(targetUser.id);
+            const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
 
+
+            if(message.guild.id == "1226181188054548500"){
+                db.prepare(`UPDATE amash SET bucks = bucks - 100 WHERE userid = ?`).run(message.author.id);
+                return message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            }
             message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
 
         } catch (err) {
             console.error("Defame Error:", err);
+            cooldownHandler.clearCooldown(message.author.id, command);
             message.reply("A database error occurred during the defamation process.");
         }
     }
