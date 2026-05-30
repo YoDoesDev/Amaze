@@ -11,7 +11,6 @@ const { db } = require('../../utils/database.js');
 const ongGames = new Map();
 
 module.exports = {
-  // 1. SLASH COMMAND DEFINITION
   data: new SlashCommandBuilder()
     .setName("rps")
     .setDescription("Play rock paper scissors with friends or a bot.")
@@ -30,25 +29,25 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
+    // Assuming your main listener has already done: await interaction.deferReply();
+    
     const totalRounds = interaction.options.getInteger("rounds");
     const targetUser = interaction.options.getUser("opponent");
 
-    // 2. INPUT VALIDATION
+    // 1. INPUT VALIDATION
     if (totalRounds <= 0 || totalRounds > 10) {
-      return interaction.reply({ 
-        content: "Please keep the rounds between 1 and 10 to prevent channel spam!", 
-        ephemeral: true 
+      return interaction.editReply({ 
+        content: "Please keep the rounds between 1 and 10 to prevent channel spam!" 
       });
     }
 
     if (ongGames.has(interaction.channel.id)) {
-      return interaction.reply({ 
-        content: "There is already a game going on in this channel. Try somewhere else maybe?", 
-        ephemeral: true 
+      return interaction.editReply({ 
+        content: "There is already a game going on in this channel. Try somewhere else maybe?" 
       });
     }
 
-    // 3. CONFIG OBJECT SETUP
+    // 2. CONFIG OBJECT SETUP
     const game = {
       self: interaction.user.username,
       selfId: interaction.user.id,
@@ -68,16 +67,15 @@ module.exports = {
     };
 
     if (!targetUser) {
-      // No opponent specified, defaults to Bot match
       game.opp = "bot";
       game.oppId = "bot";
       game.isAccepted = true;
     } else {
       if (targetUser.id === interaction.user.id) {
-        return interaction.reply({ content: "Aww man, see this loner, play with the bot dude 🥀", ephemeral: true });
+        return interaction.editReply({ content: "Aww man, see this loner, play with the bot dude 🥀" });
       }
       if (targetUser.bot) {
-        return interaction.reply({ content: "You can't play against external bots!", ephemeral: true });
+        return interaction.editReply({ content: "You can't play against external bots!" });
       }
       game.opp = targetUser.username;
       game.oppId = targetUser.id;
@@ -86,7 +84,7 @@ module.exports = {
     ongGames.set(interaction.channel.id, game);
 
     // =======================================================
-    // PHASE 1: MULTIPLAYER CHALLENGE LOBBY
+    // PHASE 1: MULTIPLAYER CHALLENGE LOBBY (Using editReply)
     // =======================================================
     if (game.opp !== "bot") {
       const challEmbed = new EmbedBuilder()
@@ -100,11 +98,11 @@ module.exports = {
         new ButtonBuilder().setCustomId("decline").setLabel("Decline").setEmoji("❌").setStyle(ButtonStyle.Danger)
       );
 
-      const askMessage = await interaction.reply({
+      // editReply edits the original deferred loading message and returns the response object
+      const askMessage = await interaction.editReply({
         content: `<@${targetUser.id}>`,
         embeds: [challEmbed],
-        components: [challRow],
-        fetchReply: true // Allows us to use awaitMessageComponent on the reply bundle
+        components: [challRow]
       });
 
       try {
@@ -121,20 +119,25 @@ module.exports = {
         }
 
         game.isAccepted = true;
-        await interaction.deleteReply().catch(() => null); // Clear out invite cleanly
+        await interaction.deleteReply().catch(() => null); // Clean up the lobby message
 
       } catch (err) {
         ongGames.delete(interaction.channel.id);
         return interaction.editReply({ content: "⌛ Match timed out!", embeds: [], components: [] });
       }
     } else {
-      // If playing the bot, acknowledge the interaction cleanly to start execution
-      await interaction.reply({ content: "🤖 Starting a match against Amaze Bot...", ephemeral: true }).catch(() => null);
+      // For a bot match, update the deferred reply text and clear it immediately
+      await interaction.editReply({ content: "🤖 Starting a match against Amaze Bot..." }).catch(() => null);
+      setTimeout(async () => {
+        await interaction.deleteReply().catch(() => null);
+      }, 1500);
     }
 
     // =======================================================
     // PHASE 2: RUNTIME MULTI-ROUND GAME ENGINE
     // =======================================================
+    // (Note: Keep using interaction.channel.send here so the actual game 
+    // loops can delete and resend fresh messages per round cleanly!)
     runGameEngine(interaction, game);
   }
 };
@@ -166,7 +169,6 @@ async function runGameEngine(interaction, game) {
       .setTimestamp();
   };
 
-  // Send the clean layout down into the active text channel
   const gameMessage = await interaction.channel.send({
     embeds: [renderStatusEmbed()],
     components: [weaponRow]
@@ -174,7 +176,7 @@ async function runGameEngine(interaction, game) {
 
   const collector = gameMessage.createMessageComponentCollector({
     componentType: ComponentType.Button,
-    time: 60000 // 60 seconds per choice
+    time: 60000 
   });
 
   collector.on('collect', async i => {
