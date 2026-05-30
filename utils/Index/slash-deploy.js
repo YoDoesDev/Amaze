@@ -36,8 +36,8 @@ const slashReg = () => {
 
     
         rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            
+            Routes.applicationCommands(clientId, guildId),
+            { body: commands }, 
         ).then(() => {
         console.log('>>> [SUCCESS] Commands deployed successfully!');
     })
