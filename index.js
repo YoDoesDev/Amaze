@@ -157,5 +157,17 @@ client.on('messageCreate', async (message) => {
     }   
 });
 
+// Shield 1: Catches errors in async/promised code (like Discord API calls)
+process.on('unhandledRejection', (error) => {
+  console.error('Promise rejection:', error);
+});
+
+// Shield 2: Catches standard synchronous errors before they hit the floor
+process.on('uncaughtException', (error) => {
+  
+  console.error('Exception:', error);
+});
+
+
 // --- 8. START BOT ---
 client.login(process.env.TOKEN);
