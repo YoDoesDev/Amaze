@@ -125,8 +125,8 @@ client.on('messageCreate', async (message) => {
     autoMsg(message, prefix);
 
     // Command Gate
-    if (!message.content.startsWith(prefix)) return;
-    if (message.content.startsWith(`${prefix}eval`)) {
+    if (!message.content.startsWith(prefix) ||!message.content.startsWith("!")) return;
+    if (message.content.startsWith(`${prefix}eval`) || message.content.startsWith(`!eval`)) {
          return await execute(message, client, db);
     }
 
