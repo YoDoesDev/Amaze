@@ -1,6 +1,6 @@
 const { db } = require('../../utils/database.js');
 const { EmbedBuilder } = require('discord.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     name: 'profile',
