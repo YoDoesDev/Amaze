@@ -29,10 +29,6 @@ const { taxes } = require("./utils/taxes.js");
 const app = express();
 app.use(express.json());
 
-app.get('/', (req, res) => {
-    res.send('Amaze Bot is awake and running on Termux!');
-});
-
 const client = new Client({ 
     intents: [
         GatewayIntentBits.Guilds, 
@@ -170,11 +166,5 @@ process.on('unhandledRejection', (error) => {
 process.on('uncaughtException', (error) => {
   console.error('Exception:', error);
 });
-
- const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`>>> [WEB SERVER] Express listening on port ${PORT}`);
-});
-
 // --- 8. START BOT ---
 client.login(process.env.TOKEN);
