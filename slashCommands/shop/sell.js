@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { items } = require('./shop.js');
+const { db } = require('../../utils/database.js');
 
 module.exports = {
   // 1. SLASH COMMAND DEFINITION
