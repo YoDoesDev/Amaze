@@ -6,7 +6,7 @@ const items = {
         name: "PR Shield", 
         id: "pr_tp", 
         emoji: "🛡️", 
-        price: 300, 
+        price: 3000, 
         desc: "Protects you from defamation for 24 hours.",
         isPerm: false 
     },
@@ -14,7 +14,7 @@ const items = {
         name: "Stock License", 
         id: "stocklic", 
         emoji: "📃", 
-        price: 1200, 
+        price: 12000, 
         desc: "Unlock the ability to hold more than 20 total stocks.",
         isPerm: true 
     },
@@ -22,7 +22,7 @@ const items = {
         name: "Philosopher's Stone", 
         id: "pstone", 
         emoji: "💎", 
-        price: 5000, 
+        price: 50000, 
         desc: "A legendary artifact. (Showcase item)",
         isPerm: true 
     },
@@ -30,7 +30,7 @@ const items = {
         name: "Vouch Doubler", 
         id: "dblv_tp", 
         emoji: "⏭️", 
-        price: 150, 
+        price: 1500, 
         desc: "Double the rep and profit you give when vouching (Lasts 12h).",
         isPerm: false 
     },
@@ -38,7 +38,7 @@ const items = {
         name: "Defame Doubler", 
         id: "ddbl_tp", 
         emoji: "↘️", 
-        price: 220, 
+        price: 2200, 
         desc: "Double the rep loss and profit damage when defaming (Lasts 12h).",
         isPerm: false 
     }
