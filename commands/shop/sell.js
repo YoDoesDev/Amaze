@@ -23,7 +23,7 @@ module.exports = {
     }
     
     db.prepare("UPDATE inventory SET pstone = pstone - ? WHERE userid = ?").run(amt, author.id);
-    db.prepare("UPDATE amash SET amash = amash + ? WHERE userid = ?").run((45000 * amt), author.id);
+    db.prepare("UPDATE amash SET bucks = bucks + ? WHERE userid = ?").run((45000 * amt), author.id);
     
     const embed = new EmbedBuilder()
     .setTitle("💎 Stones Sold!")

@@ -42,7 +42,7 @@ module.exports = {
     // 5. TRANSACTION PROCESSING
     const totalEarnings = 45000 * amt;
     db.prepare("UPDATE inventory SET pstone = pstone - ? WHERE userid = ?").run(amt, author.id);
-    db.prepare("UPDATE amash SET amash = amash + ? WHERE userid = ?").run(totalEarnings, author.id);
+    db.prepare("UPDATE amash SET bucks = bucks + ? WHERE userid = ?").run(totalEarnings, author.id);
     
     // 6. RENDER TRANSACTION RECEIPT EMBED
     const embed = new EmbedBuilder()
