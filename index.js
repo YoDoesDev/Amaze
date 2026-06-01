@@ -17,13 +17,13 @@ require('dotenv').config();
 const { initDb, db } = require('./utils/database.js');
 
 // --- 3. CUSTOM UTILITIES ---
-const { loadCommands, loadSlashCommands } = require('./utils/Index/cmdLoader.js');
-const { handleCooldown } = require('./utils/cooldowns.js');
-const { autoMsg } = require('./utils/Index/autoMsg.js');
-const { setupIntegrations } = require('./utils/Index/integrations.js');
-const { slashReg } = require('./utils/Index/slash-deploy.js');
+const { loadCommands, loadSlashCommands } = require('./utils/handlers/cmdLoader.js');
+const { handleCooldown } = require('./utils/handlers/cooldowns.js');
+const { autoMsg } = require('./utils/handlers/autoMsg.js');
+const { setupIntegrations } = require('./utils/handlers/integrations.js');
+const { slashReg } = require('./utils/handlers/slash-deploy.js');
 const { execute } = require("./utils/eval.js");
-const { taxes } = require("./utils/taxes.js");
+const { taxes } = require("./utils/handlers/taxes.js");
 
 // --- 4. INITIALIZATION ---
 const app = express();
