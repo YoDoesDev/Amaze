@@ -24,6 +24,8 @@ const { setupIntegrations } = require('./utils/handlers/integrations.js');
 const { slashReg } = require('./utils/handlers/slash-deploy.js');
 const { execute } = require("./utils/eval.js");
 const { taxes } = require("./utils/handlers/taxes.js");
+const { parseCommand } = require("./utils/handlers/cmdParse.js");
+const { executeCommand } = require(".utils/handlers/execute.js");
 
 // --- 4. INITIALIZATION ---
 const app = express();
@@ -118,44 +120,27 @@ client.on("interactionCreate", async interaction => {
 client.on('messageCreate', async (message) => {
     // Basic Gates
     if (message.author.bot) return;
-    
+    // Fetching Prefix
     const prefix = getPrefix(message.guild?.id) || "!";
-
-    // Run Auto-Replies (thx, fk u, etc.)
+    // Look for swears
     autoMsg(message, prefix);
-
-    // Command Gate
+    // If doesn't start with prefix return
     if(!message.content.startsWith("!") && !message.content.startsWith(prefix)) return;
-    if (message.content.startsWith(`!eval`)) {
-         return await execute(message, client, db);
-    }
-
-    await taxes(message, message.author.id);
-    
     // Command Parsing
-    const usedPrefix = message.content.startsWith("!") ? "!" : prefix;
-    const args = message.content.slice(usedPrefix.length).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
-    const trueCommandName = client.aliases.get(commandName) || commandName;
-    const command = client.commands.get(trueCommandName);
-
+    const parsed = parseCommand(message, prefix, client);
+    // Taking values from parsed object
+    const command = parsed?.command;
+    const args = parsed?.args;
+    // Checking if it's eval
+    if (message.content.startsWith(`!eval`)) return await execute(message, client, db);
+    // If no written command exists return
     if (!command) return;
-
-    // Cooldown Logic
+    // Cooldown
     if (handleCooldown(message, command)) return;
-
-    // Execution Logic
-    try {
-        await command.execute(message, args);
-
-        // Rare chance for a vote reminder (Social Proof)
-        if (Math.random() < 0.07) {
-            message.reply(`Having fun? Use \`${prefix}vote\` to support Amaze!`);
-        }
-    } catch (error) {
-        console.error(`>>> [ERROR] Command Execution: ${error.message}`);
-        message.reply("There was an error executing that command!");
-    }   
+    // Tax time
+    await taxes(message, message.author.id);
+    // Execution
+    await executeCommand(command, message, args, prefix);
 });
 
 // Shield 1: Catches errors in async/promised code (like Discord API calls)
