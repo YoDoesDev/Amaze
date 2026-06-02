@@ -51,4 +51,4 @@ const slashReg = async () => {
     }
 };
 
-await slashReg();
+slashReg();
