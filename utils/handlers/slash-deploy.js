@@ -51,4 +51,27 @@ const slashReg = () => {
     }
 };
 
-module.exports = { slashReg };
+try {
+    // 5. Defer the reply globally for your slash commands right before running them
+    await interaction.deferReply();
+    
+    await taxes(interaction, interaction.user.id);
+    // if (handleSlashCd(interaction, command)) return;
+    
+    // 6. Run the command's execute function
+    await command.execute(interaction);
+    
+} catch (error) {
+    console.error(`[ERROR] Execution failed for /${interaction.commandName}:`, error);
+    
+    // User-friendly error handling fallback
+    const errorMessage = { content: 'There was an error while executing this command!', ephemeral: true };
+    
+    if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(errorMessage);
+    } else {
+        await interaction.reply(errorMessage);
+    }
+}
+
+slashReg();
