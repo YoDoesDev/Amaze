@@ -30,7 +30,7 @@ for (const folder of slashFolders) {
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 // 3. Deploy!
-const slashReg = () => {
+const slashReg = async () => {
     try {
         console.log(`>>> [SYSTEM] Refreshing ${commands.length} slash commands...`);
 
@@ -74,4 +74,4 @@ try {
     }
 }
 
-slashReg();
+await slashReg();
