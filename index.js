@@ -89,6 +89,8 @@ client.on("interactionCreate", async interaction => {
     const command = client.slashCommands.get(interaction.commandName);
     // If the command doesn't exist, return
     if (!command) return;
+    // The taxes manh the taxes
+    await taxes(interaction, interaction.user.id);
     // Execute
     await slashExecute(interaction, command);
 });

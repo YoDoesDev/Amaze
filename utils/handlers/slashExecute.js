@@ -1,8 +1,6 @@
 const slashExecute = async (interaction, command) => {
   try {
         await interaction.deferReply();
-        
-        await taxes(interaction, interaction.user.id);
         // if (handleSlashCd(interaction, command)) return;
         
         await command.execute(interaction); 
