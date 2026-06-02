@@ -90,7 +90,7 @@ client.on("interactionCreate", async interaction => {
     // If the command doesn't exist, return
     if (!command) return;
     // Execute
-    slashExecute(interaction, command);
+    await slashExecute(interaction, command);
 });
 
 // --- 7. MESSAGE HANDLER ---

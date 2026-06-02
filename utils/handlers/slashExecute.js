@@ -1,4 +1,4 @@
-const slashExecute = (interaction, command) => {
+const slashExecute = async (interaction, command) => {
   try {
         await interaction.deferReply();
         
