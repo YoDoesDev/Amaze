@@ -26,6 +26,7 @@ const { execute } = require("./utils/eval.js");
 const { taxes } = require("./utils/handlers/taxes.js");
 const { parseCommand } = require("./utils/handlers/cmdParse.js");
 const { executeCommand } = require("./utils/handlers/execute.js");
+const { slashExecute } = require("./utils/handlers/slashExecute.js");
 
 // --- 4. INITIALIZATION ---
 const app = express();
@@ -69,7 +70,7 @@ const { getPrefix } = require('./utils/prefixManager.js');
 // --- 5. CLIENT READY EVENT ---
 client.once("clientReady", () => {
     console.log(`>>> [SYSTEM] Amaze Live: ${client.guilds.cache.size} servers.`);
-    slashReg();
+    
     // Launch Webhooks and Top.gg Sync
     setupIntegrations(client, app, db);
 
@@ -80,40 +81,16 @@ client.once("clientReady", () => {
 
 // --- 6. INTERACTION HANDLER ---
 client.on("interactionCreate", async interaction => {
-    // 1. Guard check: instantly exit if it's a button interaction
+    // Return if it comes from a button
     if (interaction.isButton()) return;
-    
-    // 2. Only pass Chat Input (Slash) commands down to execution
+    // If not a chat input command return
     if (!interaction.isChatInputCommand()) return;
-    
-    // 3. Retrieve the command from your defined collection
+    // Retrieve the command from the defined collection
     const command = client.slashCommands.get(interaction.commandName);
-
-    // 4. If the command doesn't exist, just exit
+    // If the command doesn't exist, return
     if (!command) return;
-
-    try {
-        // 5. Defer the reply globally for your slash commands right before running them
-        await interaction.deferReply();
-        
-        await taxes(interaction, interaction.user.id);
-        // if (handleSlashCd(interaction, command)) return;
-        
-        // 6. Run the command's execute function
-        await command.execute(interaction); 
-
-    } catch (error) {
-        console.error(`[ERROR] Execution failed for /${interaction.commandName}:`, error);
-
-        // User-friendly error handling fallback
-        const errorMessage = { content: 'There was an error while executing this command!', ephemeral: true };
-        
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(errorMessage);
-        } else {
-            await interaction.reply(errorMessage);
-        }
-    }
+    // Execute
+    slashExecute(interaction, command);
 });
 
 // --- 7. MESSAGE HANDLER ---
