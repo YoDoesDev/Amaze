@@ -133,7 +133,8 @@ client.on('messageCreate', async (message) => {
     await taxes(message, message.author.id);
     
     // Command Parsing
-    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const usedPrefix = message.content.startsWith("!") ? "!" : prefix;
+    const args = message.content.slice(usedPrefix.length).trim().split(/ +/);
     const commandName = args.shift().toLowerCase();
     const trueCommandName = client.aliases.get(commandName) || commandName;
     const command = client.commands.get(trueCommandName);
