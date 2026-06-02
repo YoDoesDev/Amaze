@@ -25,7 +25,7 @@ const { slashReg } = require('./utils/handlers/slash-deploy.js');
 const { execute } = require("./utils/eval.js");
 const { taxes } = require("./utils/handlers/taxes.js");
 const { parseCommand } = require("./utils/handlers/cmdParse.js");
-const { executeCommand } = require(".utils/handlers/execute.js");
+const { executeCommand } = require("./utils/handlers/execute.js");
 
 // --- 4. INITIALIZATION ---
 const app = express();
