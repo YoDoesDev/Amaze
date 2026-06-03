@@ -5,7 +5,7 @@ module.exports = {
   name: "coinflip", 
   aliases: ["cf"], 
   category: "Gambling", 
-  cooldown: 20,
+  cooldown: 8,
   description: "Choose your call and gamble money on a coin!\n\nSyntax: `!coinflip <amash> [h/t]\n\n[] = OPTIONAL\n<> = REQUIRED`", 
   async execute(message, args){
     // 1. Argument Handling (amt first, then call)
