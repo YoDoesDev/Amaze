@@ -31,7 +31,7 @@ const greetings = async guild => {
             name: '🚀 Get Started',
             value: 'Type \`!help\` right now to discover my full list of systems and setup commands!'
         }])
-        .setFooter({ text: 'Developed by yo.da.bro & forklifterisstillcertified' })
+        .setFooter({ text: 'Developed by yo.da.bro & theforklifterisstillcertified' })
         .setTimestamp();
     
     
