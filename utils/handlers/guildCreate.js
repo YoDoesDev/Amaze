@@ -17,7 +17,7 @@ const greetings = async guild => {
     const welcomeEmbed = new EmbedBuilder()
         .setColor('#FFB703') // Premium Gold theme for an economy bot
         .setTitle(`👋 Hello ${guild.name}! I'm Amaze!`)
-        .setDescription(`Thanks for inviting me! I'm a unique economy and gaming bot built around influence, risk, and strategy. Here is what I bring to your server:\n`)
+        .setDescription(`Thanks for inviting me! I'm a unique economy and gaming bot built around influence, risk, and strategy. My prefix is \`!\`. Here is what I bring to your server:\n`)
         .addFields([
         {
             name: '📈 Reputation Stock Market',
