@@ -1,14 +1,16 @@
 // Automated Deploy Active: May 2026.
 // Amaze Bot - Optimized for Performance and Scalability
- 
+
 // --- 1. EXTERNAL DEPENDENCIES ---
-const { 
-    Client, 
-    Collection, 
-    GatewayIntentBits, 
-    ActivityType, 
-    Options, 
-    Partials
+const {
+    Client,
+    Collection,
+    GatewayIntentBits,
+    PermissionFlagBits,
+    ActivityType,
+    Options,
+    Partials,
+    EmbedBuilder
 } = require('discord.js');
 const express = require('express');
 require('dotenv').config();
@@ -27,22 +29,23 @@ const { taxes } = require("./utils/handlers/taxes.js");
 const { parseCommand } = require("./utils/handlers/cmdParse.js");
 const { executeCommand } = require("./utils/handlers/execute.js");
 const { slashExecute } = require("./utils/handlers/slashExecute.js");
+const { greetings } = require(".utils/handlers/guildCreate.js")
 
 // --- 4. INITIALIZATION ---
 const app = express();
 app.use(express.json());
 
-const client = new Client({ 
+const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds, 
-        GatewayIntentBits.GuildMessages, 
-        GatewayIntentBits.MessageContent, 
-        GatewayIntentBits.DirectMessages, 
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.DirectMessages,
         GatewayIntentBits.GuildMembers
     ],
     partials: [
         Partials.Channel
-    ], 
+    ],
     // Extreme memory optimization for 256MB RAM
     makeCache: Options.cacheWithLimits({
         MessageManager: 10,
@@ -73,9 +76,9 @@ client.once("clientReady", () => {
     
     // Launch Webhooks and Top.gg Sync
     setupIntegrations(client, app, db);
-
-    client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers`, { 
-         type: ActivityType.Watching
+    
+    client.user.setActivity(`!help | Circulating Amash in ${client.guilds.cache.size} servers`, {
+        type: ActivityType.Watching
     });
 });
 
@@ -104,7 +107,7 @@ client.on('messageCreate', async (message) => {
     // Look for swears
     autoMsg(message, prefix);
     // If doesn't start with prefix return
-    if(!message.content.startsWith("!") && !message.content.startsWith(prefix)) return;
+    if (!message.content.startsWith("!") && !message.content.startsWith(prefix)) return;
     // Command Parsing
     const parsed = parseCommand(message, prefix, client);
     // Taking values from parsed object
@@ -122,14 +125,18 @@ client.on('messageCreate', async (message) => {
     await executeCommand(command, message, args, prefix);
 });
 
+client.on("guildCreate", async guild => {
+    await greetings(guild);
+});
+
 // Shield 1: Catches errors in async/promised code (like Discord API calls)
 process.on('unhandledRejection', (error) => {
-  console.error('Promise rejection:', error);
+    console.error('Promise rejection:', error);
 });
 
 // Shield 2: Catches standard synchronous errors before they hit the floor
 process.on('uncaughtException', (error) => {
-  console.error('Exception:', error);
+    console.error('Exception:', error);
 });
 // --- 8. START BOT ---
 client.login(process.env.TOKEN);
