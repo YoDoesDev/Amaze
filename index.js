@@ -29,7 +29,8 @@ const { taxes } = require("./utils/handlers/taxes.js");
 const { parseCommand } = require("./utils/handlers/cmdParse.js");
 const { executeCommand } = require("./utils/handlers/execute.js");
 const { slashExecute } = require("./utils/handlers/slashExecute.js");
-const { greetings } = require("./utils/handlers/guildCreate.js")
+
+const { greetings } = require("./utils/events/guildCreate.js")
 
 // --- 4. INITIALIZATION ---
 const app = express();
