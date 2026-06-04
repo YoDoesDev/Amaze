@@ -36,7 +36,7 @@ module.exports = {
       const monie = amashData ? amashData.bucks : 0;
 
       if (monie < amt) {
-        return interaction.reply(`You don't have enough ${emojis.amash} Amash!`);
+        return interaction.editReply(`You don't have enough ${emojis.amash} Amash!`);
       }
 
       if (interaction.guildId !== "1499416975531573429" && amt > 250000) {
@@ -49,22 +49,22 @@ module.exports = {
       const isWin = Math.random() < winChance;
 
       // 3. Initial response
-      await interaction.reply(`${emojis.cf} **${interaction.user.username}** flips a coin and calls **${call}**...`);
+      await interaction.editReply(`${emojis.cf} **${interaction.user.username}** flips a coin and calls **${call}**...`);
 
       // 4. Update and edit target reply
       setTimeout(async () => {
         if (isWin) {
           universalSet("amash", userId, { bucks: monie + amt });
-          await interaction.editReply(`🎉 The coin landed on **${call}**! You won **${amt * 2}** ${emojis.amash}!`);
+          await interaction.update(`🎉 The coin landed on **${call}**! You won **${amt * 2}** ${emojis.amash}!`);
         } else {
           universalSet("amash", userId, { bucks: monie - amt });
-          await interaction.editReply(`💀 It landed on the other side. You lost **${amt}** ${emojis.amash}.`);
+          await interaction.update(`💀 It landed on the other side. You lost **${amt}** ${emojis.amash}.`);
         }
       }, 2000);
 
     } catch (err) {
       console.error(err);
-      return interaction.reply({ content: "A database error occurred.", ephemeral: true });
+      return interaction.editReply({ content: "A database error occurred.", ephemeral: false });
     }
   }
 };
