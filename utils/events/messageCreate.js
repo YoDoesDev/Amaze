@@ -7,7 +7,7 @@ const { autoMsg } = require('../handlers/autoMsg.js');
 const { getPrefix } = require('../prefixManager.js');
 
 
-const execPrefix = async message => {
+const execPrefix = async (message, client) => {
     // Basic Gates
     if (message.author.bot) return;
     // Fetching Prefix

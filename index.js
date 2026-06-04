@@ -82,7 +82,7 @@ client.on("interactionCreate", async interaction => {
 
 // --- 8. MESSAGE LISTENER ---
 client.on('messageCreate', async (message) => {
-    await execPrefix(message);
+    await execPrefix(message, client);
 });
 
 client.on("guildCreate", async guild => {
