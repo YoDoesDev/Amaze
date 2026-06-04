@@ -20,19 +20,14 @@ const { initDb, db } = require('./utils/database.js');
 
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands, loadSlashCommands } = require('./utils/handlers/cmdLoader.js');
-const { handleCooldown } = require('./utils/handlers/cooldowns.js');
-const { autoMsg } = require('./utils/handlers/autoMsg.js');
 const { setupIntegrations } = require('./utils/handlers/integrations.js');
-// const { slashReg } = require('./utils/handlers/slash-deploy.js');
-const { execute } = require("./utils/eval.js");
-const { taxes } = require("./utils/handlers/taxes.js");
-const { parseCommand } = require("./utils/handlers/cmdParse.js");
-const { executeCommand } = require("./utils/handlers/execute.js");
-const { slashExecute } = require("./utils/handlers/slashExecute.js");
 
-const { greetings } = require("./utils/events/guildCreate.js")
+// --- 4. EVENT HANDLERS ---
+const { greetings } = require("./utils/events/guildCreate.js");
+const { execPrefix } = require("./utils/events/messageCreate.js");
+const { execSlash } = require("./utils/events/interactionCreate.js");
 
-// --- 4. INITIALIZATION ---
+// --- 5. INITIALIZATION ---
 const app = express();
 app.use(express.json());
 
@@ -68,10 +63,7 @@ initDb();
 loadCommands(client);
 loadSlashCommands(client);
 
-// PREFIXMANAGER LOADS AFTER DATABASE IS ESTABLISHED.
-const { getPrefix } = require('./utils/prefixManager.js');
-
-// --- 5. CLIENT READY EVENT ---
+// --- 6. CLIENT READY EVENT ---
 client.once("clientReady", () => {
     console.log(`>>> [SYSTEM] Amaze Live: ${client.guilds.cache.size} servers.`);
     
@@ -83,59 +75,24 @@ client.once("clientReady", () => {
     });
 });
 
-// --- 6. INTERACTION HANDLER ---
+// --- 7. INTERACTION LISTENER ---
 client.on("interactionCreate", async interaction => {
-    // Return if it comes from a button
-    if (interaction.isButton()) return;
-    // If not a chat input command return
-    if (!interaction.isChatInputCommand()) return;
-    // Retrieve the command from the defined collection
-    const command = client.slashCommands.get(interaction.commandName);
-    // If the command doesn't exist, return
-    if (!command) return;
-    // The taxes manh the taxes
-    await taxes(interaction, interaction.user.id);
-    // Execute
-    await slashExecute(interaction, command);
+    await execSlash(interaction, client);
 });
 
-// --- 7. MESSAGE HANDLER ---
+// --- 8. MESSAGE LISTENER ---
 client.on('messageCreate', async (message) => {
-    // Basic Gates
-    if (message.author.bot) return;
-    // Fetching Prefix
-    const prefix = getPrefix(message.guild?.id) || "!";
-    // Look for swears
-    autoMsg(message, prefix);
-    // If doesn't start with prefix return
-    if (!message.content.startsWith("!") && !message.content.startsWith(prefix)) return;
-    // Command Parsing
-    const parsed = parseCommand(message, prefix, client);
-    // Taking values from parsed object
-    const command = parsed?.command;
-    const args = parsed?.args;
-    // Checking if it's eval
-    if (message.content.startsWith(`!eval`)) return await execute(message, client, db);
-    // If no written command exists return
-    if (!command) return;
-    // Cooldown
-    if (handleCooldown(message, command)) return;
-    // Tax time
-    await taxes(message, message.author.id);
-    // Execution
-    await executeCommand(command, message, args, prefix);
+    await execPrefix(message);
 });
 
 client.on("guildCreate", async guild => {
     await greetings(guild);
 });
 
-// Shield 1: Catches errors in async/promised code (like Discord API calls)
 process.on('unhandledRejection', (error) => {
     console.error('Promise rejection:', error);
 });
 
-// Shield 2: Catches standard synchronous errors before they hit the floor
 process.on('uncaughtException', (error) => {
     console.error('Exception:', error);
 });
