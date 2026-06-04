@@ -1,4 +1,5 @@
-# Amaze Bot
+# Amaze - v1.2.0
+
 **Amaze** is a high-performance Discord bot engine built for complex economies, stock market simulations, and deep reputation systems. Designed for scalability, Amaze utilizes a custom **Matrix-Database Architecture** to handle high-frequency data mutations and composite-key relational storage.
 
 ## Core Architecture
