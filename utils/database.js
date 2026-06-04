@@ -180,11 +180,26 @@ function universalFetchAll(tableName, primaryId) {
     return rows || [];
 }
 
+ function universalDelete(tableName, id) {
+    try {
+        // Run a clean, targeted deletion statement matching the schema's primary key name
+        const statement = db.prepare(`DELETE FROM ${tableName} WHERE userid = ?`);
+        const result = statement.run(id);
+        
+        return result.changes > 0;
+    } catch (error) {
+        console.error(`[Matrix Engine] Error executing universalDelete on table "${tableName}":`, error);
+        throw error;
+    }
+}
+
+
 // --- MODULE EXPORTS ---
 module.exports = {
     universalGet,
     universalCreate,
     universalSet,
+    universalDelete, 
     universalFetchAll,
     db,
     initDb
