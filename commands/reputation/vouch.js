@@ -1,3 +1,4 @@
+const { EmbedBuilder } = require('discord.js');
 const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
@@ -6,6 +7,7 @@ module.exports = {
     category: 'Reputation', 
     cooldown: 10,
     description: 'Vouch for a user with a 8-hour cooldown per person.\n\nSyntax: `!vouch <@user>`',
+    
     async execute(message, args) {
         const targetUser = message.mentions.users.first();
         const authorId = message.author.id;
@@ -18,16 +20,15 @@ module.exports = {
 
         try {
             // =======================================================
-            // 1. FETCH ALL LOGIC DATA SEAMLESSLY VIA MATRIX WRAPPERS
+            // 1. FETCH LOGIC VIA DUAL-KEY MATRIX WRAPPERS
             // =======================================================
             const authorInventory = universalGet("inventory", authorId);
             
-            // Handle the composite mapping logic for vouch history rows
-            const vouchHistoryId = `${authorId}_${targetUser.id}`;
-            const vouchRow = universalGet("vouch_history", vouchHistoryId);
+            // FIXED: Passing separate keys to match the new vouch_history composite table structure
+            const vouchRow = universalGet("vouch_history", authorId, targetUser.id);
 
-            const lastVouch = vouchRow ? vouchRow.timestamp : null;
-            const vouchDoubler = authorInventory ? authorInventory.dblv_tp : null;
+            const lastVouch = vouchRow?.timestamp ?? null;
+            const vouchDoubler = authorInventory?.dblv_tp ?? null;
 
             // 2. Cooldown Check
             if (lastVouch && (now - lastVouch) < cooldownTime) {
@@ -37,7 +38,7 @@ module.exports = {
                 return message.reply(`This user's reputation was recently influenced. Wait **${hrs}h ${mins}m** to fame them again.`);
             }
 
-            // 3. Check for Doubler
+            // 3. Multiplier Logic
             const isDoubled = vouchDoubler && now < vouchDoubler;
             const multiplier = isDoubled ? 2 : 1;
 
@@ -45,17 +46,15 @@ module.exports = {
             // 4. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & ATOMIC)
             // =======================================================
             
-            // Record / Update history record
+            // Record / Update history record using dual-keys
             if (!vouchRow) {
-                universalCreate("vouch_history", vouchHistoryId);
+                universalCreate("vouch_history", authorId, targetUser.id);
             }
-            universalSet("vouch_history", vouchHistoryId, {
-                voucher_id: authorId,
-                receiver_id: targetUser.id,
+            universalSet("vouch_history", authorId, targetUser.id, {
                 timestamp: now
             });
 
-            // Update Target Reputation (Safe initialization included)
+            // Update Target Reputation
             const repRow = universalGet("reputation", targetUser.id);
             if (!repRow) {
                 universalCreate("reputation", targetUser.id);
@@ -67,14 +66,14 @@ module.exports = {
                 points: finalPoints
             });
 
-            // Update Investor Profits (Stock Market boost calculations)
-            const investmentRow = universalGet("investments", targetUser.id);
+            // Update Investor Profits using dual-keys (investor, invested)
+            const investmentRow = universalGet("investments", authorId, targetUser.id);
             if (investmentRow) {
                 const currentProfit = investmentRow.profit ?? 0;
                 const stocks = investmentRow.stocks ?? 0;
                 const profitGain = 5 * multiplier;
 
-                universalSet("investments", targetUser.id, {
+                universalSet("investments", authorId, targetUser.id, {
                     profit: currentProfit + (stocks * profitGain)
                 });
             }
@@ -83,7 +82,7 @@ module.exports = {
             let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${finalPoints}** reputation points.`;
             if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
 
-            await message.reply(msg);
+            return message.reply(msg);
 
         } catch (err) {
             console.error("Vouch Command Error:", err);
