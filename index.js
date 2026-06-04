@@ -6,17 +6,15 @@ const {
     Client,
     Collection,
     GatewayIntentBits,
-    PermissionFlagBits,
     ActivityType,
     Options,
-    Partials,
-    EmbedBuilder
+    Partials
 } = require('discord.js');
 const express = require('express');
 require('dotenv').config();
 
 // --- DATABASE & MANAGERS ---
-const { initDb, db } = require('./utils/database.js');
+const { initDb } = require('./utils/database.js');
 
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands, loadSlashCommands } = require('./utils/handlers/cmdLoader.js');
@@ -96,5 +94,5 @@ process.on('unhandledRejection', (error) => {
 process.on('uncaughtException', (error) => {
     console.error('Exception:', error);
 });
-// --- 8. START BOT ---
+// --- 9. START BOT ---
 client.login(process.env.TOKEN);
