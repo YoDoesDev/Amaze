@@ -14,7 +14,7 @@ const express = require('express');
 require('dotenv').config();
 
 // --- DATABASE & MANAGERS ---
-const { initDb } = require('./utils/database.js');
+const { initDb, db } = require('./utils/database.js');
 
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands, loadSlashCommands } = require('./utils/handlers/cmdLoader.js');
