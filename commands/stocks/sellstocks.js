@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-// 1. FIXED: Imported your matrix utility functions
+// 1. FIXED: Matrix wrappers are now used with dual-key logic
 const { universalGet, universalSet, universalDelete } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
@@ -26,11 +26,11 @@ module.exports = {
 
         try {
             // =======================================================
-            // 2. FETCH DATA SEAMLESSLY VIA MATRIX WRAPPERS
+            // 2. FETCH DATA VIA DUAL-KEY WRAPPERS
             // =======================================================
-            const investmentKey = `${authorId}_${target.id}`;
-            const row = universalGet("investments", investmentKey);
             const amashRow = universalGet("amash", authorId);
+            // FIXED: Passing separate keys to the dual-key wrapper
+            const row = universalGet("investments", authorId, target.id);
 
             if (!row || row.stocks <= 0) {
                 return message.reply(`You have not invested in ${target.username}!`);
@@ -38,7 +38,7 @@ module.exports = {
 
             const currentBucks = amashRow?.bucks ?? 0;
 
-            // 3. Tax Logic (Time-based fees)
+            // 3. Tax Logic
             const timeHeld = now - row.lastpurchase;
             let tFee;
             let feeLabel;
@@ -68,26 +68,21 @@ module.exports = {
             const profitLoss = finalPayout - principalValue;
 
             // =======================================================
-            // 6. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & ATOMIC)
+            // 6. EXECUTION MATRIX MUTATIONS (DUAL-KEY DISPATCH)
             // =======================================================
             
-            // Clean up investment records
             if (numToSell >= row.stocks) {
-                // If your database handler has a dedicated delete method:
-                if (typeof universalDelete === 'function') {
-                    universalDelete("investments", investmentKey);
-                } else {
-                    // Fallback alternative to reset row records inside your engine
-                    universalSet("investments", investmentKey, { stocks: 0, profit: 0 });
-                }
+                // FIXED: Passing separate keys to universalDelete
+                universalDelete("investments", authorId, target.id);
             } else {
-                universalSet("investments", investmentKey, {
+                // FIXED: Passing separate keys to universalSet
+                universalSet("investments", authorId, target.id, {
                     stocks: row.stocks - numToSell,
                     profit: row.profit - rawProfitForTheseStocks
                 });
             }
 
-            // Distribute final payout directly to amash balance
+            // Pay the final cash balance
             universalSet("amash", authorId, {
                 bucks: currentBucks + finalPayout
             });
@@ -101,9 +96,9 @@ module.exports = {
                 .setColor(color)
                 .setDescription(`Sold **${numToSell}** stocks of **${target.username}**.\n\n` +
                                 `**Market Tax:** ${feeLabel}\n` +
-                                `**Tax Paid:** -${taxAmount} Amash\n` +
-                                `**Final Payout:** ${finalPayout} Amash\n\n` +
-                                `You hit a ${keyword} **${Math.abs(Math.round(profitLoss))}** Amash.`)
+                                `**Tax Paid:** -${taxAmount.toLocaleString()} Amash\n` +
+                                `**Final Payout:** ${finalPayout.toLocaleString()} Amash\n\n` +
+                                `You hit a ${keyword} **${Math.abs(Math.round(profitLoss)).toLocaleString()}** Amash.`)
                 .setTimestamp();
             
             await message.reply({ embeds: [embed] });

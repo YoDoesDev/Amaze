@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-// 1. FIXED: Imported your clean matrix utility functions, keeping 'db' for the targeted SUM aggregate
+ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+// 1. FIXED: Supplied distinct dual-keys to the matrix wrappers where requested
 const { universalGet, universalSet, universalCreate, db } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
@@ -41,9 +41,8 @@ module.exports = {
             const amashRow = universalGet("amash", authorId);
             const inventoryRow = universalGet("inventory", authorId);
             
-            // Build the compound target key for this precise investment pairing
-            const investmentKey = `${authorId}_${targetUser.id}`;
-            const investmentRow = universalGet("investments", investmentKey);
+            // FIXED: Passing investor and invested IDs as individual arguments
+            const investmentRow = universalGet("investments", authorId, targetUser.id);
 
             // HIGH PERFORMANCE: Let SQLite run a rapid index lookup for the portfolio sum
             const sumRow = db.prepare(`SELECT SUM(stocks) as total_stocks FROM investments WHERE investor = ?`).get(authorId);
@@ -72,13 +71,13 @@ module.exports = {
                 bucks: currentBucks - totalCost
             });
 
-            // Initialize position space mapping if they are completely new to this stock option
+            // FIXED: Passing separate conditional arguments for table mapping instantiation
             if (!investmentRow) {
-                universalCreate("investments", investmentKey);
+                universalCreate("investments", authorId, targetUser.id);
             }
 
-            // Update user's localized stock shares data array mapping
-            universalSet("investments", investmentKey, {
+            // FIXED: Passed dual key references cleanly into universalSet mutation parameters
+            universalSet("investments", authorId, targetUser.id, {
                 investor: authorId,
                 invested: targetUser.id,
                 stocks: currentPositionStocks + amt,
@@ -90,7 +89,7 @@ module.exports = {
                 .setColor('#10E647')
                 .setTitle('Purchase Successful! 📈')
                 .setDescription(`Spent: **${totalCost.toLocaleString()} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: \`4% fee\`\n🕒 < 2 hrs: \`2% fee\`\n🕒 > 2 hrs: \`1% fee\`\n\n**NOTE**: The exit timer resets every single time you scale your position on this person.`)
-                .setTimestamp(); // Dropped in standard formatting block metric link
+                .setTimestamp();
 
             return interaction.editReply({ embeds: [successMsg] });
 

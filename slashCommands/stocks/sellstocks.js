@@ -1,4 +1,5 @@
  const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+// 1. FIXED: Matrix wrappers are now used with dual-key logic
 const { universalGet, universalSet, universalDelete, universalCreate } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
@@ -25,7 +26,6 @@ module.exports = {
         const now = Date.now();
         const authorId = interaction.user.id;
         
-        // 1. Initial Input Validations
         if (target.id === authorId) {
             return interaction.editReply("You can't sell your own stocks!");
         }
@@ -36,13 +36,12 @@ module.exports = {
 
         try {
             // =======================================================
-            // 2. FETCH INVESTMENT & ACCOUNT DATA VIA MATRIX WRAPPERS
+            // 2. FETCH INVESTMENT & ACCOUNT DATA (DUAL-KEY FETCH)
             // =======================================================
             const amashRow = universalGet("amash", authorId);
             
-            // Reconstruct the unique compound investment matrix tracking key
-            const investmentKey = `${authorId}_${target.id}`;
-            const investmentRow = universalGet("investments", investmentKey);
+            // FIXED: Passing separate keys to the dual-key wrapper
+            const investmentRow = universalGet("investments", authorId, target.id);
 
             const ownedStocks = investmentRow?.stocks ?? 0;
             const currentProfit = investmentRow?.profit ?? 0;
@@ -53,15 +52,15 @@ module.exports = {
                 return interaction.editReply(`You have not invested in **${target.username}**!`);
             }
 
-            // 3. Tax Logic (Time-based fee distribution)
+            // 3. Tax Logic
             const timeHeld = now - lastPurchaseTime;
             let tFee;
             let feeLabel;
 
-            if (timeHeld < 1000 * 1800) { // < 30 mins
+            if (timeHeld < 1000 * 1800) {
                 tFee = 0.04;
                 feeLabel = "4% (Paper Hands ❌)";
-            } else if (timeHeld < 1000 * 7200) { // < 2 hours
+            } else if (timeHeld < 1000 * 7200) {
                 tFee = 0.02;
                 feeLabel = "2% (Early Exit ⏳)";
             } else {
@@ -69,13 +68,11 @@ module.exports = {
                 feeLabel = "1% (Market Standard ⚖️)";
             }
 
-            // 4. Position Volume Allocation
             let numToSell = noOfStocksInput.toLowerCase() === 'all' ? ownedStocks : parseInt(noOfStocksInput);
             if (numToSell > ownedStocks) {
                 return interaction.editReply(`You only have **${ownedStocks}** stocks!`);
             }
 
-            // 5. Financial Calculations
             const rawProfitForTheseStocks = (currentProfit / ownedStocks) * numToSell;
             const principalValue = numToSell * 70;
             const grossValue = principalValue + rawProfitForTheseStocks;
@@ -85,30 +82,29 @@ module.exports = {
             const profitLoss = finalPayout - principalValue;
 
             // =======================================================
-            // 6. EXECUTE TRANSACTION MUTATIONS (MATRIX DISPATCH)
+            // 4. EXECUTE TRANSACTION (DUAL-KEY MUTATIONS)
             // =======================================================
             
-            // Cleanly cascade storage state maps based on remaining ownership holdings
+            // FIXED: Passing separate keys to universalDelete
             if (numToSell >= ownedStocks) {
-                universalDelete("investments", investmentKey);
+                universalDelete("investments", authorId, target.id);
             } else {
-                universalSet("investments", investmentKey, {
+                // FIXED: Passing separate keys to universalSet
+                universalSet("investments", authorId, target.id, {
                     stocks: ownedStocks - numToSell,
                     profit: currentProfit - rawProfitForTheseStocks
                 });
             }
 
-            // Ensure profile lines exist before sending back funds
             if (!amashRow) {
                 universalCreate("amash", authorId);
             }
 
-            // Pay the final cash balance into the player's account map state
             universalSet("amash", authorId, {
                 bucks: currentBucks + finalPayout
             });
 
-            // 7. Response Embed Layout Assembly
+            // 5. Response
             const keyword = profitLoss > 0 ? "profit of" : (profitLoss === 0 ? "break-even of" : "loss of");
             const color = profitLoss >= 0 ? '#10E647' : '#E61010';
 

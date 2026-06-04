@@ -1,5 +1,6 @@
-const { EmbedBuilder } = require('discord.js');
-const { universalGet, universalSet, universalCreate, db } = require('../../utils/database.js'); // Brought back db for targeted count
+ const { EmbedBuilder } = require('discord.js');
+// 1. FIXED: Matrix wrappers are now used with dual-key logic
+const { universalGet, universalSet, universalCreate, db } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -31,18 +32,17 @@ module.exports = {
 
         try {
             // =======================================================
-            // 1. FETCH PROFILE & BALANCE DATA VIA MATRIX WRAPPERS
+            // 1. FETCH PROFILE & BALANCE DATA VIA DUAL-KEY WRAPPERS
             // =======================================================
             const amashRow = universalGet("amash", authorId);
             const invRow = universalGet("inventory", authorId);
             
-            const investmentKey = `${authorId}_${targetUser.id}`;
-            const targetInvestment = universalGet("investments", investmentKey);
+            // FIXED: Passing separate keys to the dual-key wrapper
+            const targetInvestment = universalGet("investments", authorId, targetUser.id);
 
             // =======================================================
-            // 2. OPTIMIZED TARGETED QUERY (Avoids fetching whole table)
+            // 2. OPTIMIZED TARGETED QUERY
             // =======================================================
-            // This only pulls a single number from the disk, keeping performance perfect.
             const sumRow = db.prepare(`SELECT SUM(stocks) as total FROM investments WHERE investor = ?`).get(authorId);
             const currentTotalStocks = sumRow?.total ?? 0;
 
@@ -56,23 +56,25 @@ module.exports = {
 
             // 4. Balance Check
             if (currentBucks < totalCost) {
-                return message.reply(`You don't have enough Amash! You need **${totalCost}** but you only have **${currentBucks}**.`);
+                return message.reply(`You don't have enough Amash! You need **${totalCost.toLocaleString()}** but you only have **${currentBucks.toLocaleString()}**.`);
             }
 
             // =======================================================
-            // 5. EXECUTION MATRIX MUTATIONS
+            // 5. EXECUTION MATRIX MUTATIONS (DUAL-KEY DISPATCH)
             // =======================================================
             universalSet("amash", authorId, {
                 bucks: currentBucks - totalCost
             });
 
+            // FIXED: Passing separate keys to universalCreate
             if (!targetInvestment) {
-                universalCreate("investments", investmentKey);
+                universalCreate("investments", authorId, targetUser.id);
             }
 
             const runningStocks = targetInvestment?.stocks ?? 0;
 
-            universalSet("investments", investmentKey, {
+            // FIXED: Passing separate keys to universalSet
+            universalSet("investments", authorId, targetUser.id, {
                 investor: authorId,
                 invested: targetUser.id,
                 stocks: runningStocks + amt,
@@ -83,7 +85,7 @@ module.exports = {
             const successMsg = new EmbedBuilder()
                 .setColor('#10E647')
                 .setTitle('Purchase Successful!')
-                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: **4% fee**\n🕒 < 2 hrs: **2% fee**\n🕒 > 2 hrs: **1% fee**\n\n**NOTE**: The time will reset everytime you buy a new stock of this person.`)
+                .setDescription(`Spent: **${totalCost.toLocaleString()} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: **4% fee**\n🕒 < 2 hrs: **2% fee**\n🕒 > 2 hrs: **1% fee**\n\n**NOTE**: The time will reset everytime you buy a new stock of this person.`)
                 .setTimestamp();
 
             return message.reply({ embeds: [successMsg] });
