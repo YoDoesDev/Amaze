@@ -1,5 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { universalGet, universalSet, universalDelete, universalCreate } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -25,7 +25,7 @@ module.exports = {
         const now = Date.now();
         const authorId = interaction.user.id;
         
-        // 1. Validations
+        // 1. Initial Input Validations
         if (target.id === authorId) {
             return interaction.editReply("You can't sell your own stocks!");
         }
@@ -35,16 +35,26 @@ module.exports = {
         }
 
         try {
-            // 2. Fetch Investment Data
-            const row = db.prepare(`SELECT stocks, profit, lastpurchase FROM investments WHERE invested = ? AND investor = ?`)
-                          .get(target.id, authorId);
+            // =======================================================
+            // 2. FETCH INVESTMENT & ACCOUNT DATA VIA MATRIX WRAPPERS
+            // =======================================================
+            const amashRow = universalGet("amash", authorId);
+            
+            // Reconstruct the unique compound investment matrix tracking key
+            const investmentKey = `${authorId}_${target.id}`;
+            const investmentRow = universalGet("investments", investmentKey);
 
-            if (!row || row.stocks <= 0) {
+            const ownedStocks = investmentRow?.stocks ?? 0;
+            const currentProfit = investmentRow?.profit ?? 0;
+            const lastPurchaseTime = investmentRow?.lastpurchase ?? 0;
+            const currentBucks = amashRow?.bucks ?? 0;
+
+            if (!investmentRow || ownedStocks <= 0) {
                 return interaction.editReply(`You have not invested in **${target.username}**!`);
             }
 
-            // 3. Tax Logic (Time-based fees)
-            const timeHeld = now - row.lastpurchase;
+            // 3. Tax Logic (Time-based fee distribution)
+            const timeHeld = now - lastPurchaseTime;
             let tFee;
             let feeLabel;
 
@@ -59,14 +69,14 @@ module.exports = {
                 feeLabel = "1% (Market Standard ⚖️)";
             }
 
-            // 4. Amount Logic
-            let numToSell = noOfStocksInput.toLowerCase() === 'all' ? row.stocks : parseInt(noOfStocksInput);
-            if (numToSell > row.stocks) {
-                return interaction.editReply(`You only have **${row.stocks}** stocks!`);
+            // 4. Position Volume Allocation
+            let numToSell = noOfStocksInput.toLowerCase() === 'all' ? ownedStocks : parseInt(noOfStocksInput);
+            if (numToSell > ownedStocks) {
+                return interaction.editReply(`You only have **${ownedStocks}** stocks!`);
             }
 
             // 5. Financial Calculations
-            const rawProfitForTheseStocks = (row.profit / row.stocks) * numToSell;
+            const rawProfitForTheseStocks = (currentProfit / ownedStocks) * numToSell;
             const principalValue = numToSell * 70;
             const grossValue = principalValue + rawProfitForTheseStocks;
             
@@ -74,18 +84,31 @@ module.exports = {
             const finalPayout = Math.round(grossValue - taxAmount);
             const profitLoss = finalPayout - principalValue;
 
-            // 6. Atomic Database Updates
-            if (numToSell >= row.stocks) {
-                db.prepare(`DELETE FROM investments WHERE investor = ? AND invested = ?`).run(authorId, target.id);
+            // =======================================================
+            // 6. EXECUTE TRANSACTION MUTATIONS (MATRIX DISPATCH)
+            // =======================================================
+            
+            // Cleanly cascade storage state maps based on remaining ownership holdings
+            if (numToSell >= ownedStocks) {
+                universalDelete("investments", investmentKey);
             } else {
-                db.prepare(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`)
-                  .run(numToSell, rawProfitForTheseStocks, authorId, target.id);
+                universalSet("investments", investmentKey, {
+                    stocks: ownedStocks - numToSell,
+                    profit: currentProfit - rawProfitForTheseStocks
+                });
             }
 
-            // Add the money back to the user's account
-            db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(finalPayout, authorId);
+            // Ensure profile lines exist before sending back funds
+            if (!amashRow) {
+                universalCreate("amash", authorId);
+            }
 
-            // 7. Response Embed
+            // Pay the final cash balance into the player's account map state
+            universalSet("amash", authorId, {
+                bucks: currentBucks + finalPayout
+            });
+
+            // 7. Response Embed Layout Assembly
             const keyword = profitLoss > 0 ? "profit of" : (profitLoss === 0 ? "break-even of" : "loss of");
             const color = profitLoss >= 0 ? '#10E647' : '#E61010';
 
@@ -94,9 +117,9 @@ module.exports = {
                 .setColor(color)
                 .setDescription(`Sold **${numToSell}** stocks of **${target.username}**.\n\n` +
                                 `**Market Tax:** \`${feeLabel}\`\n` +
-                                `**Tax Paid:** \`-${taxAmount}\` Amash\n` +
-                                `**Final Payout:** \`${finalPayout}\` Amash\n\n` +
-                                `You hit a ${keyword} **${Math.abs(Math.round(profitLoss))}** Amash.`)
+                                `**Tax Paid:** \`-${taxAmount.toLocaleString()}\` Amash\n` +
+                                `**Final Payout:** \`${finalPayout.toLocaleString()}\` Amash\n\n` +
+                                `You hit a ${keyword} **${Math.abs(Math.round(profitLoss)).toLocaleString()}** Amash.`)
                 .setTimestamp();
             
             return interaction.editReply({ embeds: [embed] });

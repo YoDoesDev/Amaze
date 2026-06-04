@@ -1,5 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your clean matrix storage handlers
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -7,18 +8,24 @@ module.exports = {
     .setDescription("Receive your weekly allowance of 100 amash"), 
   category: 'Economy', 
   cooldown: 5, 
+  
   async execute(interaction) { 
     const authorId = interaction.user.id;
     const now = Date.now();
     const cooldownTime = 604800000; // 7 days in milliseconds
 
     try {
-      // 1. Fetch timestamp
-      const row = db.prepare(`SELECT wTimestamp FROM amash WHERE userid = ?`).get(authorId);
+      // =======================================================
+      // 2. FETCH DATA VIA MATRIX WRAPPERS
+      // =======================================================
+      const amashRow = universalGet("amash", authorId);
       
-      // 2. Cooldown Logic
-      if (row && row.wTimestamp && (now - row.wTimestamp < cooldownTime)) {
-        const remaining = cooldownTime - (now - row.wTimestamp);
+      const lastWeekly = amashRow ? amashRow.wTimestamp : null;
+      const currentBucks = amashRow?.bucks ?? 0;
+
+      // 3. Cooldown Logic
+      if (lastWeekly && (now - lastWeekly < cooldownTime)) {
+        const remaining = cooldownTime - (now - lastWeekly);
         const days = Math.floor(remaining / 86400000);
         const hrs = Math.floor((remaining % 86400000) / 3600000);
         const mins = Math.floor((remaining % 3600000) / 60000);
@@ -35,16 +42,21 @@ module.exports = {
         return interaction.editReply(`Be patient! Your weekly reward is available in ${timeStr}.`);
       }
 
-      // 3. Upsert Logic
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, wTimestamp) 
-        VALUES (?, 100, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 100,
-          wTimestamp = excluded.wTimestamp
-      `).run(authorId, now);
+      // =======================================================
+      // 4. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & SAFE)
+      // =======================================================
+      // Ensure the account profile row exists if they are completely new to the bot
+      if (!amashRow) {
+        universalCreate("amash", authorId);
+      }
 
+      // Safe update directly using state variables
+      universalSet("amash", authorId, {
+        bucks: currentBucks + 100,
+        wTimestamp: now
+      });
+
+      // 5. Success Response Embed
       const embed = new EmbedBuilder()
         .setTitle("Weekly Reward Claimed!")
         .setDescription("You received **100 Amash**! 💰\nSee you again in 7 days.")
@@ -58,4 +70,4 @@ module.exports = {
       return interaction.editReply("Something went wrong while claiming your weekly reward.");
     }
   }
-}
+};

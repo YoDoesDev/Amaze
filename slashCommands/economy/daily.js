@@ -1,24 +1,31 @@
-const { EmbedBuilder, SlashCommandBuilder} = require('discord.js');
-const { db } = require('../../utils/database.js');
+const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
+// 1. FIXED: Imported your clean matrix storage handlers
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
-  .setName("daily")
-  .setDescription("Use this command to receive amash everyday"), 
+    .setName("daily")
+    .setDescription("Use this command to receive amash everyday"), 
   category: 'Economy', 
   cooldown: 60,
+  
   async execute(interaction) { 
     const authorId = interaction.user.id;
     const now = Date.now();
     const cooldown = 86400000; // 24 hours in ms
 
     try {
-      // 1. Check current timestamp
-      const row = db.prepare(`SELECT dTimestamp FROM amash WHERE userid = ?`).get(authorId);
+      // =======================================================
+      // 1. FETCH DATA VIA MATRIX WRAPPERS
+      // =======================================================
+      const amashRow = universalGet("amash", authorId);
       
+      const lastDaily = amashRow ? amashRow.dTimestamp : null;
+      const currentBucks = amashRow?.bucks ?? 0;
+
       // 2. Cooldown Logic
-      if (row && (now - row.dTimestamp < cooldown)) {
-        const remaining = cooldown - (now - row.dTimestamp);
+      if (lastDaily && (now - lastDaily < cooldown)) {
+        const remaining = cooldown - (now - lastDaily);
         const hrs = Math.floor(remaining / 3600000);
         const mins = Math.floor((remaining % 3600000) / 60000);
         
@@ -26,31 +33,32 @@ module.exports = {
         return interaction.editReply(`Be patient! You can claim your daily in **${timeLeft}**.`);
       }
 
-      // 3. Update or Insert Data
-      // Since it's synchronous, this runs exactly when the check passes
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, dTimestamp) 
-        VALUES (?, ?, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 40,
-          dTimestamp = excluded.dTimestamp
-      `).run(authorId, 40, now);
+      // =======================================================
+      // 3. EXECUTION MATRIX MUTATIONS (ON CONFLICT ALTERNATIVE)
+      // =======================================================
+      // Ensure the account exists if they are completely new to the bot
+      if (!amashRow) {
+        universalCreate("amash", authorId);
+      }
 
+      // Add their 40 Amash and update the timestamp cleanly
+      universalSet("amash", authorId, {
+        bucks: currentBucks + 40,
+        dTimestamp: now
+      });
+
+      // 4. Success Response
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
         .setDescription("You receive **40 Amash**! Come back tomorrow!")
         .setColor('#57F287');
 
-      interaction.editReply({ embeds: [embed] });
+      return interaction.editReply({ embeds: [embed] });
 
     } catch (err) {
       console.error("Daily Command Error:", err);
-      if(interaction.isDeferred){
-      interaction.editReply("Something went wrong while claiming your daily reward.");
-      } else {
-        interaction.reply("Something went wrong while claiming your daily reward.");
-      }
+      // Since index.js handles deferReply globally, editReply is safe here
+      return interaction.editReply("Something went wrong while claiming your daily reward.");
     }
   }
-}
+};

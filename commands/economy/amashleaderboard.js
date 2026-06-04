@@ -1,5 +1,6 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const { universalFetchAll } = require('../../utils/database.js');
+ const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+// FIXED: Swapped out universalFetchAll for direct high-performance database execution
+const { db } = require('../../utils/database.js');
 
 module.exports = {
     name: 'amashleaderboard',
@@ -11,28 +12,25 @@ module.exports = {
     async execute(message) {
         try {
             // =======================================================
-            // 1. FETCH ALL DATA ONCE AND SORT IN-MEMORY (ORDER BY DESC)
+            // 1. HIGH-PERFORMANCE DISK EVALUATION (LIMIT 100 MAXIMUM)
             // =======================================================
-            const allRows = universalFetchAll('amash') || [];
-
-            // Sort all rows descending by bucks
-            allRows.sort((a, b) => b.bucks - a.bucks);
+            // Let SQLite sort rows natively on the disk. Never loads the whole table!
+            const top100Rows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
 
             // --- Global Data Setup (Limit 10) ---
-            const globalRows = allRows.slice(0, 10);
+            const globalRows = top100Rows.slice(0, 10);
             const globalList = globalRows.length 
                 ? globalRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
                 : "No wealthy users found in this view.";
 
             // --- Server Data Setup ---
-            const potentialTopRows = allRows.slice(0, 100);
-            const potentialIds = potentialTopRows.map(r => r.userid);
+            const potentialIds = top100Rows.map(r => r.userid);
             
-            // Single API call to check who is present in this guild
+            // Single API call to check who is present in this guild from the top 100
             const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
             
             let serverRows = [];
-            for (const row of potentialTopRows) {
+            for (const row of top100Rows) {
                 if (serverRows.length >= 10) break;
                 if (fetchedMembers.has(row.userid)) {
                     serverRows.push(row);
@@ -51,7 +49,7 @@ module.exports = {
                     .setColor(isGlobal ? '#FEE75C' : '#5865F2')
                     .setTitle(isGlobal ? `🌐 Global Wealth Rankings` : `💰 ${message.guild.name} Wealth Rankings`)
                     .setDescription(isGlobal ? globalList : serverList)
-                    .setFooter({ text: `Requested By: ${message.author.tag}` })
+                    .setFooter({ text: `Requested By: ${message.author.username}` }) // Updated tag syntax
                     .setTimestamp();
 
                 const buttons = new ActionRowBuilder().addComponents(
@@ -89,21 +87,4 @@ module.exports = {
                 try {
                     const isGlobal = i.customId === 'amash_global';
                     await i.update(generateView(isGlobal));
-                } catch (error) {
-                    console.error("Amash LB Button Error:", error);
-                }
-            });
-
-            // Clean exit layout handler
-            collector.on('end', () => {
-                if (collector.message) {
-                    response.edit({ components: [] }).catch(() => null);
-                }
-            });
-            
-        } catch (error) {
-            console.error(">>> [CRITICAL] Amash Leaderboard Error:", error);
-            message.reply("The vault is currently locked. Could not load rankings.");
-        }
-    }
-};
+                } catch (

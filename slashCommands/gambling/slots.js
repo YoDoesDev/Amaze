@@ -1,5 +1,5 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { db } = require("../../utils/database.js");
+ const { SlashCommandBuilder } = require('discord.js');
+const { universalGet, universalSet } = require("../../utils/database.js");
 const { emojis } = require("../../utils/config.js");
 
 module.exports = {
@@ -21,75 +21,77 @@ module.exports = {
     const amt = interaction.options.getInteger("amount");
 
     try {
-      // 1. Database Check
-      const balData = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(authorId);
+      // 2. MATRIX DATA FETCH
+      const balData = universalGet("amash", authorId);
       
       if (!balData) {
         return interaction.editReply("You don't have an Amash account yet! Use `/daily` to open one.");
       }
 
-      if (balData.bucks < amt) {
-        return interaction.editReply(`You don't have enough ${emojis.amash}! You only have **${balData.bucks}**.`);
+      const currentBucks = balData.bucks ?? 0;
+
+      if (currentBucks < amt) {
+        return interaction.editReply(`You don't have enough ${emojis.amash}! You only have **${currentBucks}**.`);
       }
 
-   if(!interaction.guild.id == "1499416975531573429") {
-     if(amt > 250000){
-        return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
-}}
+      // 3. FIXED: Corrected the guild check boolean precedence bug
+      if (interaction.guild?.id !== "1499416975531573429") {
+        if (amt > 250000) {
+          return interaction.editReply(`The maximum amount to gamble is 250,000 at a time!`);
+        }
+      }
 
-      // 2. Setup the Reels
-          const slotEmojis = [
-       "🐐", "🐧", "🐱", "🦅", "🐐", "🐧", "🐱", "🦅", "🐐", "🦅", "🐧", ":phoenix:", ":phoenix:"
-    ];
+      // 4. Setup the Reels
+      const slotEmojis = [
+         "🐐", "🐧", "🐱", "🦅", "🐐", "🐧", "🐱", "🦅", "🐐", "🦅", "🐧", "phoenix", "phoenix"
+      ];
 
-    const jackpotPayouts = { 
-      "🦅": 3.2, 
-      "🐐": 4,
-      "🐧": 6.5,
-      "🐱": 7,
-      ":phoenix:": 12
-    };
+      const jackpotPayouts = { 
+        "🦅": 3.2, 
+        "🐐": 4,
+        "🐧": 6.5,
+        "🐱": 7,
+        "phoenix": 12
+      };
       
       const roll = () => slotEmojis[Math.floor(Math.random() * slotEmojis.length)];
       const r1 = roll(), r2 = roll(), r3 = roll();
 
-      // 3. Payout Calculation
-      let winAmount = 0;
+      // 5. Payout & Net Change Calculations
       let winMessage = "";
-      let isWin = false;
+      let netChange = 0; // Tracks exact balance adjustments
 
       if (r1 === r2 && r2 === r3) {
-        // JACKPOT (3 Match)
+        // JACKPOT (3 Match) -> Pays out multiplier * bet, minus the cost to play
         const multiplier = jackpotPayouts[r1];
-        winAmount = Math.floor(amt * multiplier);
+        const winAmount = Math.floor(amt * multiplier);
+        netChange = winAmount - amt; 
         winMessage = `🎰 **JACKPOT!** You won **${winAmount}** ${emojis.amash}!`;
-        isWin = true;
       } else if (r1 === r2 || r2 === r3 || r1 === r3) {
-        // SMALL WIN (2 Match)
-        winAmount = amt; // Matching 2 gives money back (Break even)
-        winMessage = `✨ **Nice!** Two matched. You won **${winAmount}** ${emojis.amash}!`;
-        isWin = true;
+        // SMALL WIN (2 Match) -> Gives money back (Break even, net change is 0)
+        netChange = 0; 
+        winMessage = `✨ **Nice!** Two matched. You won your **${amt}** ${emojis.amash} back!`;
       } else {
-        // LOSS
+        // LOSS -> Lose the bet amount
+        netChange = -amt;
         winMessage = `💀 **Oof.** Better luck next time. Lost **${amt}** ${emojis.amash}.`;
-        isWin = false;
       }
 
-      // 4. Update Database
-      if (isWin) {
-        // For a win, we add the winAmount. (Note: if it's a "tie/refund", we add 0 since they already have the money? 
-        // Wait, usually gambling logic subtracts first. Let's stick to your logic: 
-        // If it's a 2-match, they "win" the amount back.
-        db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(winAmount, authorId);
-      } else {
-        db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, authorId);
-      }
+      // 6. EXECUTION MATRIX MUTATION
+      universalSet("amash", authorId, {
+        bucks: currentBucks + netChange
+      });
 
-      // 5. Visual Output
+      // 7. Visual Output
+      // Format emojis safely for raw text vs custom text strings
+      const formatEmoji = (e) => e === "phoenix" ? emojis.phoenix || "🔥" : e;
+
       await interaction.editReply(`${emojis.slots} *The reels are spinning...*`);
 
       setTimeout(async () => {
-        await interaction.editReply(`| **[ ${r1} | ${r2} | ${r3} ]** |\n${winMessage}`);
+        await interaction.editReply(
+          `| **[ ${formatEmoji(r1)} | ${formatEmoji(r2)} | ${formatEmoji(r3)} ]** |\n${winMessage}`
+        );
       }, 2000);
 
     } catch (err) {

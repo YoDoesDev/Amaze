@@ -1,5 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your clean matrix storage handlers and core db for the targeted investor sweep
+const { universalGet, universalSet, universalCreate, db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("defame")
@@ -18,7 +21,7 @@ module.exports = {
         const now = Date.now();
         const cooldownTime = 8 * 60 * 60 * 1000; // 8 Hours in ms
 
-        // 1. Initial Checks
+        // Initial Safety Checks
         if (targetUser.id === authorId) {
             return interaction.editReply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
         }
@@ -27,50 +30,88 @@ module.exports = {
         }
 
         try {
-            // 2. Fetch all logic variables in one go
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT pr_tp FROM inventory WHERE userid = ?) as target_shield,
-                    (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
-                    (SELECT ddbl_tp FROM inventory WHERE userid = ?) as author_doubler
-            `).get(targetUser.id, authorId, targetUser.id, authorId);
+            // =======================================================
+            // 2. FETCH PROFILE & ITEMS SEAMLESSLY VIA MATRIX WRAPPERS
+            // =======================================================
+            const targetShieldRow = universalGet("inventory", targetUser.id);
+            const authorDoublerRow = universalGet("inventory", authorId);
+            const amashRow = universalGet("amash", authorId);
+            const repRow = universalGet("reputation", targetUser.id);
+            
+            // Build the compound key to check history between these two specific players
+            const historyKey = `${authorId}_${targetUser.id}`;
+            const historyRow = universalGet("vouch_history", historyKey);
+
+            const targetShield = targetShieldRow?.pr_tp ?? 0;
+            const authorDoubler = authorDoublerRow?.ddbl_tp ?? 0;
+            const lastVouch = historyRow?.timestamp ?? 0;
+            const currentRepPoints = repRow?.points ?? 0;
+            const currentBucks = amashRow?.bucks ?? 0;
 
             // 3. Shield Check
-            if (row?.target_shield && now < row.target_shield) {
+            if (targetShield && now < targetShield) {
                 return interaction.editReply(`🛡️ **PR Shield Active!** ${targetUser.username} is protected.`);
             }
 
             // 4. Cooldown Check
-            if (row?.last_vouch && (now - row.last_vouch) < cooldownTime) {
-                const timeLeftMs = cooldownTime - (now - row.last_vouch);
+            if (lastVouch && (now - lastVouch) < cooldownTime) {
+                const timeLeftMs = cooldownTime - (now - lastVouch);
                 const hrs = Math.floor(timeLeftMs / 3600000);
                 const mins = Math.floor((timeLeftMs % 3600000) / 60000);
                 return interaction.editReply(`Slow down! Cooldown active for another **${hrs}h ${mins}m**.`);
             }
 
-            const multiplier = (row?.author_doubler && now < row.author_doubler) ? 2 : 1;
+            // Evaluate Defame Power
+            const multiplier = (authorDoubler && now < authorDoubler) ? 2 : 1;
+            const repDeduction = multiplier;
 
-            // 5. Atomic Execution
-            // Lock the cooldown first
-            db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
+            // =======================================================
+            // 5. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & ATOMIC)
+            // =======================================================
+            
+            // Lock the cooldown record
+            if (!historyRow) {
+                universalCreate("vouch_history", historyKey);
+            }
+            universalSet("vouch_history", historyKey, {
+                voucher_id: authorId,
+                receiver_id: targetUser.id,
+                timestamp: now
+            });
 
-            // Update Reputation
-            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points - ? WHERE userid = ?`).run(multiplier, targetUser.id);
+            // Update Target Reputation
+            if (!repRow) {
+                universalCreate("reputation", targetUser.id);
+            }
+            const finalRepPoints = currentRepPoints - repDeduction;
+            universalSet("reputation", targetUser.id, {
+                points: finalRepPoints
+            });
 
-            // Impact investors (The "Stock Market" crash logic)
-            db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
-              
-            // Fetch final points for response
-            const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
+            // HIGH PERFORMANCE: Fetch ONLY the specific investors tracking this target from disk
+            const targetedInvestors = db.prepare(`SELECT investor, stocks, profit FROM investments WHERE invested = ?`).all(targetUser.id);
+            const portfolioLossPerStock = 5 * multiplier;
 
-            // 6. Handle Server-Specific Currency Penalties
-            if (interaction.guild.id === "1226181188054548500") {
-                db.prepare(`UPDATE amash SET bucks = bucks - 100 WHERE userid = ?`).run(authorId);
-                return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            // Loop and mutate precisely through matching data slices via custom matrix keys
+            for (const investorRow of targetedInvestors) {
+                const investorKey = `${investorRow.investor}_${targetUser.id}`;
+                const currentProfit = investorRow.profit ?? 0;
+                const stocksOwned = investorRow.stocks ?? 0;
+
+                universalSet("investments", investorKey, {
+                    profit: currentProfit - (stocksOwned * portfolioLossPerStock)
+                });
             }
 
-            return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
+            // 6. Handle Server-Specific Currency Penalties
+            if (interaction.guild?.id === "1226181188054548500") {
+                universalSet("amash", authorId, {
+                    bucks: currentBucks - 100
+                });
+                return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalRepPoints}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            }
+
+            return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalRepPoints}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
 
         } catch (err) {
             console.error("Defame Error:", err);

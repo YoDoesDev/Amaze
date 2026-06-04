@@ -1,5 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your clean matrix storage handlers
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -7,18 +8,24 @@ module.exports = {
     .setDescription("Use this command to receive 400 amash every month"), 
   category: 'Economy', 
   cooldown: 5, // Internal command cooldown
+  
   async execute(interaction) { 
     const authorId = interaction.user.id;
     const now = Date.now();
     const cooldownTime = 2592000000; // 30 days in milliseconds
 
     try {
-      // 1. Fetch current timestamp from DB
-      const row = db.prepare(`SELECT mTimestamp FROM amash WHERE userid = ?`).get(authorId);
+      // =======================================================
+      // 2. FETCH DATA VIA MATRIX WRAPPERS
+      // =======================================================
+      const amashRow = universalGet("amash", authorId);
       
-      // 2. Cooldown Logic
-      if (row && row.mTimestamp && (now - row.mTimestamp < cooldownTime)) {
-        const remaining = cooldownTime - (now - row.mTimestamp);
+      const lastMonthly = amashRow ? amashRow.mTimestamp : null;
+      const currentBucks = amashRow?.bucks ?? 0;
+      
+      // 3. Cooldown Logic
+      if (lastMonthly && (now - lastMonthly < cooldownTime)) {
+        const remaining = cooldownTime - (now - lastMonthly);
         const days = Math.floor(remaining / 86400000);
         const hrs = Math.floor((remaining % 86400000) / 3600000);
         const mins = Math.floor((remaining % 3600000) / 60000);
@@ -35,16 +42,21 @@ module.exports = {
         return interaction.editReply(`Be patient! You can claim your monthly in ${timeStr}.`);
       }
 
-      // 3. Atomic Upsert Logic
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, mTimestamp) 
-        VALUES (?, 400, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 400,
-          mTimestamp = excluded.mTimestamp
-      `).run(authorId, now);
+      // =======================================================
+      // 4. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & SAFE)
+      // =======================================================
+      // Ensure the row exists if they are completely brand new to the system
+      if (!amashRow) {
+        universalCreate("amash", authorId);
+      }
 
+      // Append values inside application state cleanly
+      universalSet("amash", authorId, {
+        bucks: currentBucks + 400,
+        mTimestamp: now
+      });
+
+      // 5. Success Response Embed
       const embed = new EmbedBuilder()
         .setTitle("Monthly Amash Collected!")
         .setDescription("You received **400 Amash**! 💰\nCome back in 30 days.")
@@ -58,4 +70,4 @@ module.exports = {
       return interaction.editReply("Something went wrong while claiming your monthly reward.");
     }
   }
-}
+};

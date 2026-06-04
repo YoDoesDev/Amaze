@@ -1,5 +1,6 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+ const { SlashCommandBuilder } = require('discord.js');
+// 1. FIXED: Migrated to your matrix wrappers, keeping 'db' for the targeted investment sweep
+const { universalGet, universalSet, universalCreate, db } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -18,9 +19,9 @@ module.exports = {
         const targetUser = interaction.options.getUser("target");
         const authorId = interaction.user.id;
         const now = Date.now();
-        const cooldownTime = 8 * 60 * 60 * 1000;
+        const cooldownTime = 8 * 60 * 60 * 1000; // 8 hours in ms
 
-        // 1. Validations
+        // 1. Initial Input Validations
         if (targetUser.id === authorId) {
             return interaction.editReply("Self-vouching? Focus on the work, not the praise.");
         }
@@ -29,48 +30,78 @@ module.exports = {
         }
 
         try {
-            // 2. Fetch History and Doubler Status
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
-                    (SELECT dblv_tp FROM inventory WHERE userid = ?) as vouch_doubler
-            `).get(authorId, targetUser.id, authorId);
+            // =======================================================
+            // 2. FETCH DATA VIA MATRIX WRAPPERS
+            // =======================================================
+            const authorDoublerRow = universalGet("inventory", authorId);
+            const targetRepRow = universalGet("reputation", targetUser.id);
+            
+            // Compound key check for user history mapping
+            const historyKey = `${authorId}_${targetUser.id}`;
+            const historyRow = universalGet("vouch_history", historyKey);
 
-            // 3. Cooldown Logic
-            if (row?.last_vouch && (now - row.last_vouch) < cooldownTime) {
-                const timeLeftMs = cooldownTime - (now - row.last_vouch);
+            const lastVouch = historyRow?.timestamp ?? 0;
+            const vouchDoublerExpiration = authorDoublerRow?.dblv_tp ?? 0;
+            const currentRepPoints = targetRepRow?.points ?? 0;
+
+            // 3. Cooldown Logic Check
+            if (lastVouch && (now - lastVouch) < cooldownTime) {
+                const timeLeftMs = cooldownTime - (now - lastVouch);
                 const hrs = Math.floor(timeLeftMs / 3600000);
                 const mins = Math.floor((timeLeftMs % 3600000) / 60000);
                 return interaction.editReply(`This user's reputation was recently influenced. Wait **${hrs}h ${mins}m** to fame them again.`);
             }
 
-            // 4. Check for Doubler
-            const isDoubled = row?.vouch_doubler && now < row.vouch_doubler;
+            // 4. Check for Doubler Status
+            const isDoubled = vouchDoublerExpiration && now < vouchDoublerExpiration;
             const multiplier = isDoubled ? 2 : 1;
 
-            // 5. Database Updates (The Transfer)
-            // Update history
-            db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
+            // =======================================================
+            // 5. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & ATOMIC)
+            // =======================================================
+            
+            // Update history tracking key
+            if (!historyRow) {
+                universalCreate("vouch_history", historyKey);
+            }
+            universalSet("vouch_history", historyKey, {
+                voucher_id: authorId,
+                receiver_id: targetUser.id,
+                timestamp: now
+            });
 
-            // Ensure reputation row exists and Update
-            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points + ? WHERE userid = ?`).run(multiplier, targetUser.id);
+            // Ensure reputation row exists, then update
+            if (!targetRepRow) {
+                universalCreate("reputation", targetUser.id);
+            }
+            const finalRepPoints = currentRepPoints + multiplier;
+            universalSet("reputation", targetUser.id, {
+                points: finalRepPoints
+            });
 
-            // Update Investor Profits (Multiplied)
-            const profitGain = 5 * multiplier;
-            db.prepare(`UPDATE investments SET profit = profit + (stocks * ?) WHERE invested = ?`).run(profitGain, targetUser.id);
+            // HIGH PERFORMANCE: Extract *only* the specific portfolio records for this target from disk
+            const targetedInvestors = db.prepare(`SELECT investor, stocks, profit FROM investments WHERE invested = ?`).all(targetUser.id);
+            const portfolioGainPerStock = 5 * multiplier;
 
-            // 6. Fetch Final Result and Respond
-            const repRow = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
+            // Execute matrix mutation precisely for each active investor
+            for (const investorRow of targetedInvestors) {
+                const investorKey = `${investorRow.investor}_${targetUser.id}`;
+                const currentProfit = investorRow.profit ?? 0;
+                const stocksOwned = investorRow.stocks ?? 0;
 
-            let responseMsg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points.`;
+                universalSet("investments", investorKey, {
+                    profit: currentProfit + (stocksOwned * portfolioGainPerStock)
+                });
+            }
+
+            // 6. Respond with Results
+            let responseMsg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${finalRepPoints}** reputation points.`;
             if (isDoubled) responseMsg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${responseMsg}`;
 
             return interaction.editReply(responseMsg);
 
         } catch (err) {
             console.error("Vouch Command Error:", err);
-            // If the command fails, we clear the internal command cooldown
             clearCooldown(authorId, module.exports);
             return interaction.editReply("A database error occurred while recording the vouch.");
         }

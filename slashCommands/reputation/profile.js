@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// FIXED: Brought back pinpoint matrix tools, keeping 'db' for targeted query aggregation
+const { universalGet, db } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -16,25 +17,30 @@ module.exports = {
 
     async execute(interaction) {
         const authorId = interaction.user.id;
-        // If no target is provided, default to the command executor
         const user = interaction.options.getUser("target") || interaction.user;
 
         try {
-            // 1. Fetch Amash balance
-            const amashRow = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(user.id);
-            const bucks = amashRow ? amashRow.bucks : '0 (UNOPENED)';
+            // =======================================================
+            // 1. PINPOINT PROFILE FETCH VIA MATRIX WRAPPERS
+            // =======================================================
+            const amashRow = universalGet("amash", user.id);
+            const repRow = universalGet("reputation", user.id);
 
-            // 2. Fetch All Reputations for Ranking calculation
-            const rows = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC`).all();
-
-            let rep = 0;
+            const bucks = amashRow ? amashRow.bucks.toLocaleString() : '0 (UNOPENED)';
+            const rep = repRow ? repRow.points : 0;
+            
             let rank = 'Unranked';
 
-            const index = rows.findIndex(r => r.userid === user.id);
-
-            if (index !== -1) {
-                rep = rows[index].points;
-                rank = index + 1;
+            // =======================================================
+            // 2. HIGH-PERFORMANCE TARGETED RANK CALCULATION
+            // =======================================================
+            // Only perform rank calculations if they actually have a record in the rep table
+            if (repRow) {
+                const countRow = db.prepare(`SELECT COUNT(*) as higherPlayers FROM reputation WHERE points > ?`).get(rep);
+                const higherPlayersCount = countRow?.higherPlayers ?? 0;
+                
+                // Rank is equal to the number of players above them + 1
+                rank = higherPlayersCount + 1;
             }
 
             // 3. Build the profile embed
@@ -65,7 +71,6 @@ module.exports = {
 
         } catch (err) {
             console.error("Profile Command Error:", err);
-            // Reset command cooldown on failure
             clearCooldown(authorId, module.exports);
             return interaction.editReply('An error occurred while fetching the profile.');
         }

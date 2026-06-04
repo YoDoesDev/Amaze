@@ -1,4 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder } = require('discord.js');
+// Brought back the direct 'db' import for optimized performance
 const { db } = require('../../utils/database.js');
 
 module.exports = {
@@ -9,18 +10,22 @@ module.exports = {
     cooldown: 30,
 
     async execute(interaction) {
-        // No deferReply here since index.js handles it!
         try {
+            // Helper function to process the dataset and generate the ranking lists
             const generateLB = async (isGlobal) => {
+                // HIGH PERFORMANCE: Let SQLite sort and truncate on disk. Only pulls 100 rows maximum!
                 const allData = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
                 
                 let data;
                 if (isGlobal) {
                     data = allData.slice(0, 10);
                 } else {
+                    // Safe Limit Safeguard: Grab the top 100 wealthiest globally to filter for guild matching
                     const topIds = allData.map(r => r.userid);
+                    
                     const fetchedMembers = await interaction.guild.members.fetch({ user: topIds }).catch(() => new Map());
                     const guildMemberIds = Array.from(fetchedMembers.keys());
+                    
                     data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
                 }
 
@@ -51,7 +56,7 @@ module.exports = {
                 .setColor('#5865F2')
                 .setTitle(`💰 ${interaction.guild.name} Wealth Rankings`)
                 .setDescription(initialDesc)
-                .setFooter({ text: `Requested By: ${interaction.user.tag}` })
+                .setFooter({ text: `Requested By: ${interaction.user.username}` })
                 .setTimestamp();
 
             // Use editReply because the interaction is already deferred by index.js
@@ -94,7 +99,6 @@ module.exports = {
 
         } catch (error) {
             console.error(">>> [CRITICAL] Amash Leaderboard Error:", error);
-            // Always use editReply here since it's already deferred
             await interaction.editReply({ content: "The vault is currently locked.", embeds: [], components: [] });
         }
     }

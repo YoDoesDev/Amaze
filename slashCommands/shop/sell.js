@@ -1,6 +1,6 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { universalGet, universalSet } = require('../../utils/database.js');
 const { items } = require('./shop.js');
-const { db } = require('../../utils/database.js');
 
 module.exports = {
   // 1. SLASH COMMAND DEFINITION
@@ -19,42 +19,65 @@ module.exports = {
   async execute(interaction) {
     // 2. EXTRACT CONTEXT VALUES
     const amt = interaction.options.getInteger("amount");
-    const author = interaction.user; // 'interaction.user' replaces 'message.author'
+    const author = interaction.user;
 
     // 3. INPUT VALIDATION 
-    // Slash commands enforce whole integers, but we keep the <= 0 shield active
     if (amt <= 0) {
       return interaction.editReply({
         content: "Please enter a valid, positive amount of Philosopher's Stones you wanna sell."
       });
     }
     
-    // 4. DATABASE INTEGRITY CHECK
-    const pstones = db.prepare("SELECT pstone FROM inventory WHERE userid = ?").get(author.id);
-    
-    if (!pstones || pstones.pstone < amt) {
-      const uHave = !pstones ? 0 : pstones.pstone;
-      return interaction.editReply({
-        content: `You don't have enough Stones to sell them! You have only ${uHave} Philosopher's Stone(s).`
+    try {
+      // =======================================================
+      // 4. FETCH POOLS VIA MATRIX WRAPPERS
+      // =======================================================
+      const inventoryRow = universalGet("inventory", author.id);
+      const amashRow = universalGet("amash", author.id);
+      
+      const currentStones = inventoryRow?.pstone ?? 0;
+      const currentBucks = amashRow?.bucks ?? 0;
+      
+      // Validation Check against inventory state
+      if (currentStones < amt) {
+        return interaction.editReply({
+          content: `You don't have enough Stones to sell them! You have only ${currentStones} Philosopher's Stone(s).`
+        });
+      }
+      
+      // =======================================================
+      // 5. TRANSACTION PROCESSING (MATRIX MUTATIONS)
+      // =======================================================
+      const totalEarnings = 45000 * amt;
+      const finalBucks = currentBucks + totalEarnings;
+      const finalStones = currentStones - amt;
+
+      // Deduct items from inventory state record
+      universalSet("inventory", author.id, {
+          pstone: finalStones
       });
+
+      // Credit cash balance to account state record
+      universalSet("amash", author.id, {
+          bucks: finalBucks
+      });
+      
+      // 6. RENDER TRANSACTION RECEIPT EMBED
+      const embed = new EmbedBuilder()
+        .setTitle("💎 Stones Sold!")
+        .setDescription(`<@${author.id}>, you have sold ${amt} Philosopher's Stone(s) and received **${totalEarnings.toLocaleString()}** Amash!`)
+        .setColor('#30E025')
+        .setFooter({
+          text: `Sold by: ${author.username}` // Cleaned up deprecated .tag call
+        })
+        .setTimestamp();
+      
+      // 7. DISPATCH VIA EDITREPLY
+      return interaction.editReply({ content: null, embeds: [embed] });
+
+    } catch (err) {
+        console.error("Sell Command Error:", err);
+        return interaction.editReply("An error occurred while trying to sell your items.");
     }
-    
-    // 5. TRANSACTION PROCESSING
-    const totalEarnings = 45000 * amt;
-    db.prepare("UPDATE inventory SET pstone = pstone - ? WHERE userid = ?").run(amt, author.id);
-    db.prepare("UPDATE amash SET bucks = bucks + ? WHERE userid = ?").run(totalEarnings, author.id);
-    
-    // 6. RENDER TRANSACTION RECEIPT EMBED
-    const embed = new EmbedBuilder()
-      .setTitle("💎 Stones Sold!")
-      .setDescription(`<@${author.id}>, you have sold ${amt} Philosopher's Stone(s) and received ${totalEarnings} amash!`)
-      .setColor('#30E025')
-      .setFooter({
-        text: `Sold by: ${author.tag}` // Using your clean, unmentionable tag update!
-      })
-      .setTimestamp();
-    
-    // 7. DISPATCH VIA EDITREPLY
-    return interaction.editReply({ content: null, embeds: [embed] });
   }
-}
+};

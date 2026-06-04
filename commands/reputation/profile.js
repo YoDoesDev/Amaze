@@ -1,5 +1,6 @@
- const { EmbedBuilder } = require('discord.js');
-const { universalGet, universalFetchAll } = require('../../utils/database.js');
+const { EmbedBuilder } = require('discord.js');
+// FIXED: Kept universalGet for pinpoint data, brought back 'db' for the native COUNT ranking calculation
+const { universalGet, db } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -11,36 +12,38 @@ module.exports = {
         const user = message.mentions.users.first() || message.author;
 
         try {
-            // 2. Fetch Amash balance via Matrix Wrapper
+            // =======================================================
+            // 1. PINPOINT PROFILE FETCH VIA MATRIX WRAPPERS
+            // =======================================================
             const amashRow = universalGet("amash", user.id);
+            const repRow = universalGet("reputation", user.id);
+
             const bucks = amashRow ? amashRow.bucks.toLocaleString() : '0 (UNOPENED)';
-
-            // 3. Fetch All Reputations and sort in-memory to find the Rank Position
-            const allRepRows = universalFetchAll("reputation") || [];
+            const rep = repRow ? repRow.points : 0;
             
-            // Sort rows descending by points
-            allRepRows.sort((a, b) => b.points - a.points);
-
-            let rep = 0;
             let rank = 'Unranked';
 
-            // Find the index of the targeted user
-            const index = allRepRows.findIndex(r => r.userid === user.id);
-
-            if (index !== -1) {
-                rep = allRepRows[index].points;
-                rank = index + 1;
+            // =======================================================
+            // 2. HIGH-PERFORMANCE TARGETED RANK CALCULATION
+            // =======================================================
+            // Only query the engine for rank sorting if they actually have a record
+            if (repRow) {
+                const countRow = db.prepare(`SELECT COUNT(*) as higherPlayers FROM reputation WHERE points > ?`).get(rep);
+                const higherPlayersCount = countRow?.higherPlayers ?? 0;
+                
+                // Position is equal to the number of players above them + 1
+                rank = higherPlayersCount + 1;
             }
 
-            // 4. Build and Send Embed
+            // 3. Build and Send Embed
             const embed = new EmbedBuilder()
                 .setTitle(`${user.username}'s Profile`)
-                .setThumbnail(user.displayAvatarURL())
+                .setThumbnail(user.displayAvatarURL({ dynamic: true })) // Kept fallback thumbnail consistency
                 .setColor('#3498DB')
                 .addFields(
                     {
                         name: 'User',
-                        value: user.username,
+                        value: `<@${user.id}>`, // Swapped raw string to user mention for better UI cohesion
                         inline: false
                     },
                     {
