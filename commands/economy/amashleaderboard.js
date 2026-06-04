@@ -1,5 +1,5 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const { universalFetchAll } = require('../../utils/database.js');
 
 module.exports = {
     name: 'amashleaderboard',
@@ -11,17 +11,21 @@ module.exports = {
     async execute(message) {
         try {
             // =======================================================
-            // 1. PRE-COMPUTE DATA BEFORE INITIAL RESPONSE (NO INTERACTION LAG)
+            // 1. FETCH ALL DATA ONCE AND SORT IN-MEMORY (ORDER BY DESC)
             // =======================================================
-            
-            // --- Global Data Setup ---
-            const globalRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 10`).all();
+            const allRows = universalFetchAll('amash') || [];
+
+            // Sort all rows descending by bucks
+            allRows.sort((a, b) => b.bucks - a.bucks);
+
+            // --- Global Data Setup (Limit 10) ---
+            const globalRows = allRows.slice(0, 10);
             const globalList = globalRows.length 
                 ? globalRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
                 : "No wealthy users found in this view.";
 
             // --- Server Data Setup ---
-            const potentialTopRows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+            const potentialTopRows = allRows.slice(0, 100);
             const potentialIds = potentialTopRows.map(r => r.userid);
             
             // Single API call to check who is present in this guild
@@ -84,10 +88,7 @@ module.exports = {
 
                 try {
                     const isGlobal = i.customId === 'amash_global';
-                    
-                    // We generate the layout and update directly in one clean swoop!
                     await i.update(generateView(isGlobal));
-
                 } catch (error) {
                     console.error("Amash LB Button Error:", error);
                 }
@@ -106,5 +107,3 @@ module.exports = {
         }
     }
 };
-
-

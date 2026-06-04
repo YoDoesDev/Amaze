@@ -1,6 +1,5 @@
 const { ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, ComponentType } = require('discord.js');
 const { emojis } = require('../../utils/config.js');
-const { db } = require('../../utils/database.js');
 const ongGames = new Map();
 
 module.exports = {

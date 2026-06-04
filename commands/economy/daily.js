@@ -1,5 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const {
+  universalGet, 
+  universalSet, 
+  universalCreate, 
+} = require('../../utils/database.js');
 
 module.exports = {
   name: 'daily', 
@@ -14,8 +18,7 @@ module.exports = {
 
     try {
       // 1. Check current timestamp
-      const row = db.prepare(`SELECT dTimestamp FROM amash WHERE userid = ?`).get(authorId);
-      
+      const row = universalGet("amash", authorId);
       // 2. Cooldown Logic
       if (row && (now - row.dTimestamp < cooldown)) {
         const remaining = cooldown - (now - row.dTimestamp);
@@ -27,14 +30,14 @@ module.exports = {
 
       // 3. Update or Insert Data
       // Since it's synchronous, this runs exactly when the check passes
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, dTimestamp) 
-        VALUES (?, ?, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 40,
-          dTimestamp = excluded.dTimestamp
-      `).run(authorId, 40, now);
+      if(!row) universalCreate("amash", authorId);
+      
+      const currentBucks = row?row.bucks:0
+      
+      universalSet("amash", authorId, {
+        bucks: currentBucks + 40,
+        dTimestamp: now
+      });
 
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")

@@ -1,5 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your matrix utility functions
+const {
+  universalGet, 
+  universalSet, 
+  universalCreate, 
+} = require('../../utils/database.js');
 
 module.exports = {
   name: 'monthly', 
@@ -13,11 +18,11 @@ module.exports = {
     const cooldown = 2592000000; // 30 days in ms
 
     try {
-      // 1. Check current timestamp
-      const row = db.prepare(`SELECT mTimestamp FROM amash WHERE userid = ?`).get(authorId);
+      // 1. Check current timestamp using your matrix wrapper
+      const row = universalGet("amash", authorId);
       
       // 2. Cooldown Logic
-      if (row && (now - row.mTimestamp < cooldown)) {
+      if (row && row.mTimestamp && (now - row.mTimestamp < cooldown)) {
         const remaining = cooldown - (now - row.mTimestamp);
         const days = Math.floor(remaining / 86400000);
         const hrs = Math.floor((remaining % 86400000) / 3600000);
@@ -30,26 +35,30 @@ module.exports = {
         return message.reply(`Be patient! You can claim your monthly in ${timeStr}.`);
       }
 
-      // 3. Update or Insert Data
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, mTimestamp) 
-        VALUES (?, ?, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 400,
-          mTimestamp = excluded.mTimestamp
-      `).run(authorId, 400, now);
+      // 3. Initialize missing account row (Your custom ON CONFLICT alternative)
+      if (!row) {
+        universalCreate("amash", authorId);
+      }
+      
+      // 4. Safe fallback for new accounts to prevent crash
+      const currentBucks = row?.bucks ?? 0;
+
+      // 5. Commit updates via matrix mutator
+      universalSet("amash", authorId, {
+        bucks: currentBucks + 400,
+        mTimestamp: now
+      });
 
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
         .setDescription("You receive **400 Amash**! Come back next month!")
         .setColor('#57F287');
 
-      message.reply({ embeds: [embed] });
+      await message.reply({ embeds: [embed] });
 
     } catch (err) {
       console.error("Monthly Command Error:", err);
       message.reply("A database error occurred while claiming your monthly reward.");
     }
   }
-}
+};

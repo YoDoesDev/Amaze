@@ -1,6 +1,7 @@
 const { items } = require('./shop.js');
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const { universalGet, universalSet } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
   name: "sell", 
@@ -11,29 +12,53 @@ module.exports = {
     const amt = parseInt(args[0]) || 1;
     const author = message.author;
     
-    if(isNaN(amt) || amt%1 > 0 || amt <= 0){
+    // 1. Validation
+    if(isNaN(amt) || amt % 1 > 0 || amt <= 0){
       return message.reply("Please enter a valid amount of Philosopher's Stones you wanna sell.");
     }
     
-    const pstones = db.prepare("SELECT pstone FROM inventory WHERE userid = ?").get(author.id);
-    
-    if(!pstones || pstones.pstone < amt){
-      const uHave = !pstones?0:pstones.pstone
-      return message.reply(`You don't have enough Stones to sell them! You have only ${uHave} Philosopher's Stone(s).`)
+    try {
+      // 2. Fetch inventory and amash balance using matrix wrappers
+      const invRow = universalGet("inventory", author.id);
+      const amashRow = universalGet("amash", author.id);
+
+      const currentStones = invRow?.pstone ?? 0;
+      const currentBucks = amashRow?.bucks ?? 0;
+      
+      // 3. Asset Availability Check
+      if (currentStones < amt) {
+        return message.reply(`You don't have enough Stones to sell them! You have only **${currentStones}** Philosopher's Stone(s).`);
+      }
+      
+      const payout = 45000 * amt;
+
+      // 4. Execution Matrix Mutations (Sequential & Safe)
+      // Deduct from inventory
+      universalSet("inventory", author.id, {
+        pstone: currentStones - amt
+      });
+
+      // Add to amash balance
+      universalSet("amash", author.id, {
+        bucks: currentBucks + payout
+      });
+      
+      // 5. Build and Send Success Embed
+      const embed = new EmbedBuilder()
+        .setTitle("💎 Stones Sold!")
+        .setDescription(`<@${author.id}>, you have sold **${amt}** Philosopher's Stone(s) and received **${payout.toLocaleString()}** amash!`)
+        .setColor('#30E025')
+        .setFooter({
+          text: `Sold by: ${author.username}`
+        })
+        .setTimestamp();
+      
+      return message.reply({ embeds: [embed] });
+
+    } catch (err) {
+      console.error("Sell Command Error:", err);
+      clearCooldown(author.id, module.exports);
+      return message.reply("A database error occurred while processing your transaction.");
     }
-    
-    db.prepare("UPDATE inventory SET pstone = pstone - ? WHERE userid = ?").run(amt, author.id);
-    db.prepare("UPDATE amash SET bucks = bucks + ? WHERE userid = ?").run((45000 * amt), author.id);
-    
-    const embed = new EmbedBuilder()
-    .setTitle("💎 Stones Sold!")
-    .setDescription(`<@${author.id}>, you have sold ${amt} Philosopher's Stone(s) and received ${45000 * amt} amash!`)
-    .setColor('#30E025')
-    .setFooter({
-      text: `Sold by: ${author.tag}`
-    })
-    .setTimestamp();
-    
-    return message.reply({embeds: [embed]});
   }
-}
+};

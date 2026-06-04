@@ -1,5 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your matrix utility functions
+const { universalGet, universalSet, universalDelete } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -24,15 +25,20 @@ module.exports = {
         }
 
         try {
-            // 1. Fetch Investment Data
-            const row = db.prepare(`SELECT stocks, profit, lastpurchase FROM investments WHERE invested = ? AND investor = ?`)
-                          .get(target.id, authorId);
+            // =======================================================
+            // 2. FETCH DATA SEAMLESSLY VIA MATRIX WRAPPERS
+            // =======================================================
+            const investmentKey = `${authorId}_${target.id}`;
+            const row = universalGet("investments", investmentKey);
+            const amashRow = universalGet("amash", authorId);
 
             if (!row || row.stocks <= 0) {
                 return message.reply(`You have not invested in ${target.username}!`);
             }
 
-            // 2. Tax Logic (Time-based fees)
+            const currentBucks = amashRow?.bucks ?? 0;
+
+            // 3. Tax Logic (Time-based fees)
             const timeHeld = now - row.lastpurchase;
             let tFee;
             let feeLabel;
@@ -48,11 +54,11 @@ module.exports = {
                 feeLabel = "1% (Market Standard)";
             }
 
-            // 3. Amount Logic
+            // 4. Amount Logic
             let numToSell = noOfStocksInput.toLowerCase() === 'all' ? row.stocks : parseInt(noOfStocksInput);
             if (numToSell > row.stocks) return message.reply(`You only have ${row.stocks} stocks!`);
 
-            // 4. Financial Calculations
+            // 5. Financial Calculations
             const rawProfitForTheseStocks = (row.profit / row.stocks) * numToSell;
             const principalValue = numToSell * 70;
             const grossValue = principalValue + rawProfitForTheseStocks;
@@ -61,18 +67,32 @@ module.exports = {
             const finalPayout = Math.round(grossValue - taxAmount);
             const profitLoss = finalPayout - principalValue;
 
-            // 5. Atomic Database Updates
+            // =======================================================
+            // 6. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & ATOMIC)
+            // =======================================================
+            
+            // Clean up investment records
             if (numToSell >= row.stocks) {
-                db.prepare(`DELETE FROM investments WHERE investor = ? AND invested = ?`).run(authorId, target.id);
+                // If your database handler has a dedicated delete method:
+                if (typeof universalDelete === 'function') {
+                    universalDelete("investments", investmentKey);
+                } else {
+                    // Fallback alternative to reset row records inside your engine
+                    universalSet("investments", investmentKey, { stocks: 0, profit: 0 });
+                }
             } else {
-                db.prepare(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`)
-                  .run(numToSell, rawProfitForTheseStocks, authorId, target.id);
+                universalSet("investments", investmentKey, {
+                    stocks: row.stocks - numToSell,
+                    profit: row.profit - rawProfitForTheseStocks
+                });
             }
 
-            // Add the money to balance
-            db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(finalPayout, authorId);
+            // Distribute final payout directly to amash balance
+            universalSet("amash", authorId, {
+                bucks: currentBucks + finalPayout
+            });
 
-            // 6. Response Embed
+            // 7. Response Embed
             const keyword = profitLoss > 0 ? "profit of" : (profitLoss === 0 ? "break-even of" : "loss of");
             const color = profitLoss >= 0 ? '#10E647' : '#E61010';
 

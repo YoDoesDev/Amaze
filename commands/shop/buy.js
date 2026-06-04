@@ -1,5 +1,6 @@
-const { db } = require('../../utils/database.js');
 const { items } = require('./shop.js');
+// 1. FIXED: Imported your matrix utility functions
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -17,16 +18,15 @@ module.exports = {
         }
 
         try {
-            // 1. Fetch Data (Synchronous & Direct)
-            // Note: We use .get() for a single row result
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT bucks FROM amash WHERE userid = ?) as bucks,
-                    (SELECT ${item.id} FROM inventory WHERE userid = ?) as current_item
-            `).get(userId, userId);
+            // =======================================================
+            // 1. FETCH ALL DATA SEAMLESSLY VIA MATRIX WRAPPERS
+            // =======================================================
+            const amashRow = universalGet("amash", userId);
+            const invRow = universalGet("inventory", userId);
 
-            const balance = row?.bucks ?? 0;
-            const itemStatus = row?.current_item ?? 0;
+            const balance = amashRow?.bucks ?? 0;
+            // Dynamically read the specific column based on the item ID
+            const itemStatus = invRow ? invRow[item.id] : 0;
             const now = Date.now();
 
             // 2. Balance Check
@@ -34,7 +34,7 @@ module.exports = {
                 return message.reply(`You need **${item.price} Amash** to buy this, but you only have **${balance}**.`);
             }
 
-            // 3. Ownership Check (Logic remains the same, just cleaner)
+            // 3. Ownership Check
             if (itemCode !== "3") { 
                 if (item.isPerm && itemStatus >= 1) {
                     return message.reply(`You already own a **${item.name}**!`);
@@ -55,18 +55,31 @@ module.exports = {
                 newStatus = now + duration;
             }
 
-            // 5. Execution (No more .serialize or nested callbacks!)
-            // These run one after another perfectly.
-            db.prepare(`INSERT OR IGNORE INTO inventory (userid) VALUES (?)`).run(userId);
-            db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(item.price, userId);
-            db.prepare(`UPDATE inventory SET ${item.id} = ? WHERE userid = ?`).run(newStatus, userId);
+            // =======================================================
+            // 5. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & SAFE)
+            // =======================================================
+            
+            // Deduct money from amash table
+            universalSet("amash", userId, {
+                bucks: balance - item.price
+            });
+
+            // Ensure inventory row exists (Your custom inline INSERT OR IGNORE alternative)
+            if (!invRow) {
+                universalCreate("inventory", userId);
+            }
+
+            // Update inventory column using a computed property name [item.id]
+            universalSet("inventory", userId, {
+                [item.id]: newStatus
+            });
 
             // 6. Final Response
             let successDetail = item.id === 'pstone' 
                 ? `You now own **${newStatus}** Philosopher's Stones! 💎` 
                 : `Successfully bought **${item.name}**.`;
 
-            message.reply(`💸 **Purchase Successful!** ${successDetail}\nRemaining balance: **${balance - item.price} Amash**.`);
+            message.reply(`💸 **Purchase Successful!** ${successDetail}\nRemaining balance: **${(balance - item.price).toLocaleString()} Amash**.`);
 
         } catch (err) {
             console.error("Buy Command Error:", err);

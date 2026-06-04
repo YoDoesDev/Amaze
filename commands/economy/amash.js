@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const { universalGet } = require('../../utils/database.js');
 
 module.exports = {
   name: 'amash', 
@@ -11,7 +11,7 @@ module.exports = {
 
     try {
       // 1. Fetch the balance row
-      const row = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(targetUser.id);
+      const row = universalGet('amash', targetUser.id);
       
       // 2. Logic for uninitialized accounts
       if (!row) {

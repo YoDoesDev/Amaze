@@ -1,5 +1,9 @@
-const { db } = require("../../utils/database.js");
 const { emojis } = require("../../utils/config.js");
+// 1. Imported your matrix utility functions
+const {
+  universalGet, 
+  universalSet, 
+} = require('../../utils/database.js');
 
 module.exports = {
   name: "coinflip", 
@@ -23,22 +27,23 @@ module.exports = {
     
     let stones, monie;
     try {
-      // 3. Database Fetching with Fallbacks
-      const invData = db.prepare(`SELECT pstone FROM inventory WHERE userid = ?`).get(message.author.id);
+      // 3. Database Fetching with your Matrix Wrappers
+      const invData = universalGet("inventory", message.author.id);
       stones = invData ? invData.pstone : 0;
       
-      const amashData = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(message.author.id);
+      const amashData = universalGet("amash", message.author.id);
       monie = amashData ? amashData.bucks : 0;
 
       if(monie < amt){
         return message.reply(`You don't have enough ${emojis.amash} Amash!`);
       }
 
-     if(!message.guild.id == "1499416975531573429"){
-      if(amt > 250000){
-        return message.reply(`The maximum amount to gamble is 250,000 at a time!`);
-}
-}
+      // FIXED: Corrected the logical operator precedence check for the guild restriction
+      if (message.guild.id !== "1499416975531573429") {
+        if (amt > 250000) {
+          return message.reply(`The maximum amount to gamble is 250,000 at a time!`);
+        }
+      }
     } catch(err) {
       console.error(err);
       return message.reply("A Database error occurred.");
@@ -50,7 +55,6 @@ module.exports = {
     const winChance = 0.5 + (0.005 * effectiveStones);
 
     // 5. Execution & Animation
-    // We send the flipping message and store it in 'msg'
     const msg = await message.channel.send(`${emojis.cf} **${message.author.username}** flips a coin and calls **${call}**...`);
 
     if(stones > 0){
@@ -63,10 +67,16 @@ module.exports = {
 
       try {
         if (isWin) {
-          db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(amt, message.author.id);
+          // 4. Update via matrix mutator
+          universalSet("amash", message.author.id, {
+            bucks: monie + amt
+          });
           await msg.edit(`🎉 The coin landed on **${call}**! You won **${amt * 2}** ${emojis.amash}!`);
         } else {
-          db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, message.author.id);
+          // 4. Update via matrix mutator
+          universalSet("amash", message.author.id, {
+            bucks: monie - amt
+          });
           await msg.edit(`💀 It landed on the other side. You lost **${amt}** ${emojis.amash}.`);
         }
       } catch (err) {

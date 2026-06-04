@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const { universalGet } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -10,11 +10,11 @@ module.exports = {
   cooldown: 30,
   async execute(message) { 
     const authorId = message.author.id;
-    const now = Date.now(); // Using Date.now() for consistency with your timestamps
+    const now = Date.now(); 
 
     try {
       // 1. Fetch the entire row
-      const row = db.prepare(`SELECT * FROM inventory WHERE userid = ?`).get(authorId);
+      const row = universalGet("inventory", authorId);
 
       // 2. Empty Check
       if (!row) {
@@ -27,13 +27,12 @@ module.exports = {
           forceStatic: false
       });
       
-      // 3. Status Logic
-      // Check if current time is less than the stored expiry timestamp
-      const pr = row.pr_tp > now ? "🟢 ON" : "🔴 OFF";
-      const ddbl = row.ddbl_tp > now ? "🟢 ON" : "🔴 OFF";
-      const dblv = row.dblv_tp > now ? "🟢 ON" : "🔴 OFF";
+      // 3. Status Logic with Safe Nullish Fallbacks
+      const pr = (row.pr_tp ?? 0) > now ? "🟢 ON" : "🔴 OFF";
+      const ddbl = (row.ddbl_tp ?? 0) > now ? "🟢 ON" : "🔴 OFF";
+      const dblv = (row.dblv_tp ?? 0) > now ? "🟢 ON" : "🔴 OFF";
       const pstone = row.pstone ?? 0;
-      const lic = row.stocklic >= 1 ? '✅ ACQUIRED' : '❌ NOT ACQUIRED';
+      const lic = (row.stocklic ?? 0) >= 1 ? '✅ ACQUIRED' : '❌ NOT ACQUIRED';
       
       const msg = `1. 🛡 **PR Shield:** ${pr}\n2. ⏭️ **Vouch Doubler:** ${dblv}\n3. ↘️ **Defame Doubler:** ${ddbl}\n4. 💎 **Philosopher's Stone:** ${pstone}\n5. 📃 **Stock License:** ${lic}`;
       

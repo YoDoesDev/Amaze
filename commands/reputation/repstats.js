@@ -1,5 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js'); 
+const { universalGet } = require('../../utils/database.js'); 
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -14,7 +14,7 @@ module.exports = {
 
             // 1. Fetch points (Synchronous & Direct)
             // No callback needed; the code waits here until db returns the row.
-            const row = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
+            const row = universalGet("reputation", targetUser.id);
             
             const points = row?.points ?? 0;
 

@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your matrix utility functions
+const { universalFetchAll } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -11,18 +12,24 @@ module.exports = {
 
     async execute(message) {
         try {
-            // Function to generate the embed and buttons
+            // Helper function to generate the embed and buttons dynamically
             const createLeaderboard = async (isGlobal) => {
-                const allData = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC LIMIT 100`).all();
+                // 2. Fetch all reputation rows and sort in-memory (ORDER BY DESC)
+                const allData = universalFetchAll("reputation") || [];
+                allData.sort((a, b) => b.points - a.points);
                 
                 let data;
                 if (isGlobal) {
                     data = allData.slice(0, 10);
                 } else {
-                    const topIds = allData.map(r => r.userid);
+                    // Grab the top 100 global rows to screen for guild membership
+                    const potentialTopRows = allData.slice(0, 100);
+                    const topIds = potentialTopRows.map(r => r.userid);
+                    
                     const fetchedMembers = await message.guild.members.fetch({ user: topIds }).catch(() => new Map());
                     const guildMemberIds = Array.from(fetchedMembers.keys());
-                    data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
+                    
+                    data = potentialTopRows.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
                 }
 
                 const list = data.length 
@@ -52,7 +59,7 @@ module.exports = {
                 return { embeds: [embed], components: [buttons] };
             };
 
-            // Initial Send
+            // Initial Send (Starts on Server View)
             const initialBoard = await createLeaderboard(false);
             const response = await message.reply(initialBoard);
 
@@ -72,7 +79,7 @@ module.exports = {
                     // 2. The Logic: Determine if Global was clicked
                     const isGlobal = i.customId === 'lb_global';
                     
-                    // 3. Generate new content FIRST
+                    // 3. Generate new content FIRST using matrix updates
                     const nextBoard = await createLeaderboard(isGlobal);
 
                     // 4. Update the message instantly
