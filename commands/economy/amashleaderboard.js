@@ -1,90 +1,83 @@
- const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-// FIXED: Swapped out universalFetchAll for direct high-performance database execution
+const { EmbedBuilder } = require('discord.js');
+// FIXED: Using raw 'db' for an ultra-fast, targeted native SQL index sweep
 const { db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     name: 'amashleaderboard',
-    category: 'Economy',
-    aliases: ['amashlb', 'alb', 'baltop', 'al'],
+    aliases: ['amashlb', 'baltop', 'leaderboard'],
     cooldown: 30,
-    description: 'Wealth rankings with a Global/Server toggle.',
+    description: 'View the richest users globally or server-wide based on Amash.',
+    category: 'Economy',
 
-    async execute(message) {
+    async execute(message, args) {
+        const authorId = message.author.id;
+        const inputType = args[0]?.toLowerCase();
+
         try {
-            // =======================================================
-            // 1. HIGH-PERFORMANCE DISK EVALUATION (LIMIT 100 MAXIMUM)
-            // =======================================================
-            // Let SQLite sort rows natively on the disk. Never loads the whole table!
-            const top100Rows = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+            // Determine if the user is asking for global or local server rankings
+            // Default to 'server' to keep communities engaged locally
+            const isGlobal = inputType === 'global' || inputType === 'g';
 
-            // --- Global Data Setup (Limit 10) ---
-            const globalRows = top100Rows.slice(0, 10);
-            const globalList = globalRows.length 
-                ? globalRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
-                : "No wealthy users found in this view.";
+            let leaderboardList = "";
+            let embedTitle = "";
+            let embedColor = "";
 
-            // --- Server Data Setup ---
-            const potentialIds = top100Rows.map(r => r.userid);
-            
-            // Single API call to check who is present in this guild from the top 100
-            const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
-            
-            let serverRows = [];
-            for (const row of top100Rows) {
-                if (serverRows.length >= 10) break;
-                if (fetchedMembers.has(row.userid)) {
-                    serverRows.push(row);
+            if (isGlobal) {
+                // =======================================================
+                // 1. HIGH-PERFORMANCE GLOBAL SWEEP (LIMIT 10)
+                // =======================================================
+                // Pulls exactly 10 rows from disk using indexes. No fetch-all array sorting!
+                const topGlobal = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 10`).all();
+                
+                embedTitle = "🌐 Global Amash Leaderboard";
+                embedColor = "#FEE75C"; // Rich Gold
+
+                leaderboardList = topGlobal.length 
+                    ? topGlobal.map((row, i) => `**${i + 1}.** <@${row.userid}> — \`${row.bucks.toLocaleString()}\` Amash`).join('\n')
+                    : "No data available for the global economy.";
+            } else {
+                // =======================================================
+                // 2. HIGH-PERFORMANCE SERVER-WIDE FILTER (LIMIT 100 POOL)
+                // =======================================================
+                // Grab the top 100 richest users globally first to act as our potential pool
+                const top100Global = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+                const potentialIds = top100Global.map(r => r.userid);
+
+                // Check which of those top 100 global players are actually in this specific Discord server
+                const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
+
+                let serverRows = [];
+                for (const row of top100Global) {
+                    if (serverRows.length >= 10) break; // Hard stop as soon as we secure our top 10 local users
+                    if (fetchedMembers.has(row.userid)) {
+                        serverRows.push(row);
+                    }
                 }
+
+                embedTitle = `🏆 ${message.guild.name} Wealth Rankings`;
+                embedColor = "#5865F2"; // Discord Blurple
+
+                leaderboardList = serverRows.length
+                    ? serverRows.map((row, i) => `**${i + 1}.** <@${row.userid}> — \`${row.bucks.toLocaleString()}\` Amash`).join('\n')
+                    : "None of the global top 100 players are currently in this server.";
             }
 
-            const serverList = serverRows.length 
-                ? serverRows.map((row, index) => `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
-                : "No wealthy users found in this view.";
+            // 3. Assemble and Send the Visual Leaderboard
+            const embed = new EmbedBuilder()
+                .setTitle(embedTitle)
+                .setColor(embedColor)
+                .setDescription(leaderboardList)
+                .setThumbnail(message.guild.iconURL({ dynamic: true }))
+                .setFooter({ text: `Requested by ${message.author.username} • Type !amashlb global for global stats` })
+                .setTimestamp();
 
-            // =======================================================
-            // 2. HELPER FUNCTION TO GENERATE COLD VIEW STRUCTURES
-            // =======================================================
-            const generateView = (isGlobal) => {
-                const embed = new EmbedBuilder()
-                    .setColor(isGlobal ? '#FEE75C' : '#5865F2')
-                    .setTitle(isGlobal ? `🌐 Global Wealth Rankings` : `💰 ${message.guild.name} Wealth Rankings`)
-                    .setDescription(isGlobal ? globalList : serverList)
-                    .setFooter({ text: `Requested By: ${message.author.username}` }) // Updated tag syntax
-                    .setTimestamp();
+            await message.reply({ embeds: [embed] });
 
-                const buttons = new ActionRowBuilder().addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('amash_server')
-                        .setLabel('Server')
-                        .setStyle(isGlobal ? ButtonStyle.Primary : ButtonStyle.Secondary)
-                        .setDisabled(!isGlobal),
-                    new ButtonBuilder()
-                        .setCustomId('amash_global')
-                        .setLabel('Global')
-                        .setStyle(!isGlobal ? ButtonStyle.Primary : ButtonStyle.Secondary)
-                        .setDisabled(isGlobal)
-                );
-
-                return { embeds: [embed], components: [buttons] };
-            };
-
-            // Initial launch display (Starts on Server view)
-            const response = await message.reply(generateView(false));
-
-            // =======================================================
-            // 3. COLLECTOR LOOP (COMPLETELY LOCAL & INSTANTANEOUS)
-            // =======================================================
-            const collector = response.createMessageComponentCollector({ 
-                componentType: ComponentType.Button, 
-                time: 60000 
-            });
-
-            collector.on('collect', async i => {
-                if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "This vault is restricted to the original requester!", ephemeral: true });
-                }
-
-                try {
-                    const isGlobal = i.customId === 'amash_global';
-                    await i.update(generateView(isGlobal));
-                } catch (
+        } catch (err) {
+            console.error("Amash Leaderboard Prefix Error:", err);
+            // Safely restore user's command execution state if a database deadlock occurs
+            return message.reply("An error occurred while loading the wealth rankings.");
+        }
+    }
+};
