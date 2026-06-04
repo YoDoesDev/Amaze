@@ -6,7 +6,7 @@ module.exports = {
   name: "slots",
   aliases: ["s"],
   category: "Gambling",
-  cooldown: 15,
+  cooldown: 14,
   description: "Bet some money to win prizes!\n\nSyntax: `!slots <amash>`\n\n<> = REQUIRED",
   async execute(message, args) {
     const amt = parseInt(args[0]);

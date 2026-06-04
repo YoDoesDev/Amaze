@@ -1,14 +1,16 @@
-const { REST, Routes } = require('discord.js');
+
+ const { REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
-// Import your config/token
+
+// Destructure configuration variables
 const { clientId, guildId } = require('../config.js'); 
 
 const commands = [];
 const slashPath = path.join(__dirname, '../../slashCommands');
 
-// 1. Logic to grab all command data (matches your loader logic)
+// 1. Gather all command payload data
 const slashFolders = fs.readdirSync(slashPath);
 for (const folder of slashFolders) {
     const folderPath = path.join(slashPath, folder);
@@ -26,29 +28,34 @@ for (const folder of slashFolders) {
     }
 }
 
-// 2. Prepare the REST manager
+// 2. Prepare the REST manager with your .env token
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
-// 3. Deploy!
-const slashReg = () => {
+// 3. Deploy Routine
+const slashReg = async () => {
     try {
         console.log(`>>> [SYSTEM] Refreshing ${commands.length} slash commands...`);
 
-    
-        rest.put(
-            Routes.applicationGuildCommands(clientId, guildId),
-            { body: commands },
-        ).then(() => {
-        console.log('>>> [SUCCESS] Commands deployed successfully!');
-    })
-    .catch((error) => {
-        console.error(">>> [DEPLOY ERROR]:", error);
-    });;
+        // CHOOSE ONE ROUTE BELOW:
 
-        console.log('>>> [SUCCESS] Commands deployed successfully!');
+        // OPTION A: Global deployment (Registers everywhere, takes up to 1 hour to sync)
+        await rest.put(
+            Routes.applicationCommands(clientId),
+            { body: commands }
+        );
+
+        /* // OPTION B: Guild/Dev-only deployment (Instant testing, uncomment to use)
+        await rest.put(
+            Routes.applicationGuildCommands(clientId, guildId),
+            { body: commands }
+        );
+        */
+
+        console.log('>>> [SUCCESS] Commands deployed successfully into the Discord network!');
     } catch (error) {
-        console.error(error);
+        console.error(">>> [DEPLOY ERROR]:", error);
     }
 };
 
-module.exports = { slashReg };
+slashReg();
+

@@ -1,7 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
-
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("defame")
