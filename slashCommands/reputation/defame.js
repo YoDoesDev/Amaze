@@ -49,7 +49,7 @@ module.exports = {
 
             // 3. EXECUTION
             if (!vouchRow) universalCreate("vouch_history", authorId, targetUser.id);
-            universalSet("vouch_history", authorId, targetUser.id, { timestamp: now });
+            universalSet("vouch_history", authorId, { timestamp: now }, targetUser.id);
 
             const repRow = universalGet("reputation", targetUser.id);
             if (!repRow) universalCreate("reputation", targetUser.id);
@@ -60,9 +60,9 @@ module.exports = {
             // Impact investors
             const investmentRow = universalGet("investments", authorId, targetUser.id);
             if (investmentRow) {
-                universalSet("investments", authorId, targetUser.id, {
+                universalSet("investments", authorId, {
                     profit: investmentRow.profit - (investmentRow.stocks * (5 * multiplier))
-                });
+                }, targetUser.id);
             }
 
             // Server-specific tax

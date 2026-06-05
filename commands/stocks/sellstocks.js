@@ -76,10 +76,10 @@ module.exports = {
                 universalDelete("investments", authorId, target.id);
             } else {
                 // FIXED: Passing separate keys to universalSet
-                universalSet("investments", authorId, target.id, {
+                universalSet("investments", authorId, {
                     stocks: row.stocks - numToSell,
                     profit: row.profit - rawProfitForTheseStocks
-                });
+                }, target.id);
             }
 
             // Pay the final cash balance

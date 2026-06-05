@@ -77,12 +77,12 @@ module.exports = {
             }
 
             // FIXED: Passed dual key references cleanly into universalSet mutation parameters
-            universalSet("investments", authorId, targetUser.id, {
+            universalSet("investments", authorId {
                 investor: authorId,
                 invested: targetUser.id,
                 stocks: currentPositionStocks + amt,
                 lastpurchase: now
-            });
+            }, targetUser.id);
 
             // 6. Success Output Manifest Construction
             const successMsg = new EmbedBuilder()

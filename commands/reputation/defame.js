@@ -54,9 +54,9 @@ module.exports = {
                 universalCreate("vouch_history", authorId, targetUser.id);
             }
             // FIXED: Passing separate keys to universalSet
-            universalSet("vouch_history", authorId, targetUser.id, {
+            universalSet("vouch_history", authorId, {
                 timestamp: now
-            });
+            }, targetUser.id);
 
             // Update Target Reputation
             const repRow = universalGet("reputation", targetUser.id);
@@ -76,9 +76,9 @@ module.exports = {
                 const currentProfit = investmentRow.profit ?? 0;
                 const stocks = investmentRow.stocks ?? 0;
                 // FIXED: Pass separate keys to universalSet for investments
-                universalSet("investments", authorId, targetUser.id, {
+                universalSet("investments", authorId, {
                     profit: currentProfit - (stocks * (5 * multiplier))
-                });
+                }, targetUser.id);
             }
 
             // Server-specific tax

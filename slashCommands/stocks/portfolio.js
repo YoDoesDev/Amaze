@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const { universalFetchAll } = require('../../utils/database.js');
 const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
@@ -21,8 +21,7 @@ module.exports = {
 
     try {
       // 1. Fetch investment holdings rows
-      const rows = db.prepare(`SELECT invested, stocks, profit FROM investments WHERE investor = ?`)
-                     .all(target.id);
+      const rows = universalFetchAll("investments", target.id);
 
       // 2. Portfolio Empty Validation Guard
       if (rows.length === 0) {

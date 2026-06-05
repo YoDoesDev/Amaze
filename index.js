@@ -19,6 +19,15 @@ const { initDb, db } = require('./utils/database.js');
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands, loadSlashCommands } = require('./utils/handlers/cmdLoader.js');
 const { setupIntegrations } = require('./utils/handlers/integrations.js');
+const {
+  reputation, 
+  vouch_history, 
+  amash, 
+  investments, 
+  inventory, 
+  portfolio, 
+  clearCache
+} = require("./utils/cache.js");
 
 // --- 4. EVENT HANDLERS ---
 const { greetings } = require("./utils/events/guildCreate.js");
@@ -61,6 +70,12 @@ initDb();
 loadCommands(client);
 loadSlashCommands(client);
 
+// Fire up cache clearing command
+
+setInterval(() => {
+  clearCache([reputation, vouch_history, amash, investments, inventory, portfolio]);
+}, 1000 * 60 * 10);
+
 // --- 6. CLIENT READY EVENT ---
 client.once("clientReady", () => {
     console.log(`>>> [SYSTEM] Amaze Live: ${client.guilds.cache.size} servers.`);
@@ -94,5 +109,13 @@ process.on('unhandledRejection', (error) => {
 process.on('uncaughtException', (error) => {
     console.error('Exception:', error);
 });
+
+ // Clean shutdown
+process.on('SIGINT', () => {
+    console.log(">>> [SYSTEM] Shutting down, closing database...");
+    db.close();
+    process.exit(0);
+});
+
 // --- 9. START BOT ---
 client.login(process.env.TOKEN);

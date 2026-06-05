@@ -50,9 +50,9 @@ module.exports = {
             if (!vouchRow) {
                 universalCreate("vouch_history", authorId, targetUser.id);
             }
-            universalSet("vouch_history", authorId, targetUser.id, {
+            universalSet("vouch_history", authorId, {
                 timestamp: now
-            });
+            }, targetUser.id);
 
             // Update Target Reputation
             const repRow = universalGet("reputation", targetUser.id);
@@ -73,9 +73,9 @@ module.exports = {
                 const stocks = investmentRow.stocks ?? 0;
                 const profitGain = 5 * multiplier;
 
-                universalSet("investments", authorId, targetUser.id, {
+                universalSet("investments", authorId, {
                     profit: currentProfit + (stocks * profitGain)
-                });
+                }, targetUser.id);
             }
 
             // 5. Output Response

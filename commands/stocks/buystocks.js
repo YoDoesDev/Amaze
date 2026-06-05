@@ -74,12 +74,12 @@ module.exports = {
             const runningStocks = targetInvestment?.stocks ?? 0;
 
             // FIXED: Passing separate keys to universalSet
-            universalSet("investments", authorId, targetUser.id, {
+            universalSet("investments", authorId, {
                 investor: authorId,
                 invested: targetUser.id,
                 stocks: runningStocks + amt,
                 lastpurchase: now
-            });
+            }, targetUser.id);
 
             // 6. Success Embed
             const successMsg = new EmbedBuilder()

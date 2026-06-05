@@ -45,7 +45,7 @@ module.exports = {
             // 3. EXECUTION MUTATIONS (DUAL-KEY DISPATCH)
             if (!vouchRow) universalCreate("vouch_history", authorId, targetUser.id);
             
-            universalSet("vouch_history", authorId, targetUser.id, { timestamp: now });
+            universalSet("vouch_history", authorId, { timestamp: now }, targetUser.id);
 
             // Update Target Reputation
             const repRow = universalGet("reputation", targetUser.id);
@@ -58,9 +58,9 @@ module.exports = {
             // Note: Fixed to fetch by (investor, invested) per schema
             const investmentRow = universalGet("investments", authorId, targetUser.id);
             if (investmentRow) {
-                universalSet("investments", authorId, targetUser.id, {
+                universalSet("investments", authorId, {
                     profit: (investmentRow.profit ?? 0) + (investmentRow.stocks * (5 * multiplier))
-                });
+                }, targetUser.id);
             }
 
             // 4. Output Response
