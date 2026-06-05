@@ -5,16 +5,6 @@ const investments = new Map();
 const inventory = new Map();
 const portfolio = new Map();
 
-module.exports = {
-  reputation, 
-  vouch_history, 
-  amash, 
-  investments, 
-  inventory, 
-  portfolio, 
-  clearCache
-};
-
 const clearCache = caches => {
   const now = Date.now();
   caches.forEach(cache => {
@@ -24,4 +14,14 @@ const clearCache = caches => {
       }
     }
   })
+};
+
+module.exports = {
+  reputation, 
+  vouch_history, 
+  amash, 
+  investments, 
+  inventory, 
+  portfolio, 
+  clearCache
 };
