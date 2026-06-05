@@ -77,7 +77,7 @@ module.exports = {
             }
 
             // FIXED: Passed dual key references cleanly into universalSet mutation parameters
-            universalSet("investments", authorId {
+            universalSet("investments", authorId, {
                 investor: authorId,
                 invested: targetUser.id,
                 stocks: currentPositionStocks + amt,
