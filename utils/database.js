@@ -78,7 +78,7 @@ function universalGet(tableName, primaryId, secondaryId = null) {
         return schema.cache.get(cacheKey).data;
     }
     
-    const query = `SELECT * FROM ${tableName} WHERE ${schema.keys[0]} = ? `;
+    let query = `SELECT * FROM ${tableName} WHERE ${schema.keys[0]} = ? `;
     const pass = [primaryId];
     
     if(secondaryId !== null){
