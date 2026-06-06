@@ -50,16 +50,27 @@ module.exports = {
         universalCreate("amash", authorId);
       }
 
-      // Append values inside application state cleanly
+      let streak = amashRow? amashRow.mStreak:0;
+      const isBroken = amashRow? (now - amashRow.mTimestamp > 1000 * 60 * 60 * 24 * 61) : false;
+      
+      if(isBroken){
+        streak = 0
+      } else{
+        streak++;
+      }
+      
+      const reward = Math.round(400 + Math.random() * 400 * ((streak - 1 < 0)? 0:(streak - 1)) + 82);
+      
       universalSet("amash", authorId, {
-        bucks: currentBucks + 400,
-        mTimestamp: now
+        bucks: currentBucks + reward,
+        mTimestamp: now, 
+        mStreak: streak
       });
 
       // 5. Success Response Embed
       const embed = new EmbedBuilder()
         .setTitle("Monthly Amash Collected!")
-        .setDescription("You received **400 Amash**! 💰\nCome back in 30 days.")
+        .setDescription(`You received **${reward} Amash**! 💰\nCome back in 30 days.`)
         .setColor('#57F287')
         .setTimestamp();
 

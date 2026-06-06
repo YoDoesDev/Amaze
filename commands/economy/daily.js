@@ -30,18 +30,30 @@ module.exports = {
 
       // 3. Update or Insert Data
       // Since it's synchronous, this runs exactly when the check passes
+      
       if(!row) universalCreate("amash", authorId);
       
-      const currentBucks = row?row.bucks:0
+      const currentBucks = row?row.bucks:0;
+      let streak = row? row.dStreak:0;
+      const isBroken = row? (now - row.dTimestamp > 1000 * 60 * 60 * 48) : false;
+      
+      if(isBroken){
+        streak = 0
+      } else{
+        streak++;
+      }
+      
+      const reward = Math.round(40 + Math.random() * 40 * ((streak - 1 < 0)? 0:(streak - 1)) + 13);
       
       universalSet("amash", authorId, {
-        bucks: currentBucks + 40,
-        dTimestamp: now
+        bucks: currentBucks + reward,
+        dTimestamp: now, 
+        dStreak: streak
       });
 
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
-        .setDescription("You receive **40 Amash**! Come back tomorrow!")
+        .setDescription(`You receive **${reward} Amash**! Come back tomorrow!`)
         .setColor('#57F287');
 
       message.reply({ embeds: [embed] });

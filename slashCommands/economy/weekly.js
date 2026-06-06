@@ -49,17 +49,28 @@ module.exports = {
       if (!amashRow) {
         universalCreate("amash", authorId);
       }
-
-      // Safe update directly using state variables
+      
+      let streak = amashRow? amashRow.wStreak:0;
+      const isBroken = amashRow? (now - amashRow.wTimestamp > 1000 * 60 * 60 * 24 * 14) : false;
+      
+      if(isBroken){
+        streak = 0
+      } else{
+        streak++;
+      }
+      
+      const reward = Math.round(100 + Math.random() * 100 * ((streak - 1 < 0)? 0:(streak - 1)) + 21);
+      
       universalSet("amash", authorId, {
-        bucks: currentBucks + 100,
-        wTimestamp: now
+        bucks: currentBucks + reward,
+        wTimestamp: now, 
+        wStreak: streak
       });
 
       // 5. Success Response Embed
       const embed = new EmbedBuilder()
         .setTitle("Weekly Reward Claimed!")
-        .setDescription("You received **100 Amash**! 💰\nSee you again in 7 days.")
+        .setDescription(`You received **${reward} Amash**! 💰\nSee you again in 7 days.`) 
         .setColor('#57F287')
         .setTimestamp();
 

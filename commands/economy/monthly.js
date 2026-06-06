@@ -41,12 +41,22 @@ module.exports = {
       }
       
       // 4. Safe fallback for new accounts to prevent crash
-      const currentBucks = row?.bucks ?? 0;
-
-      // 5. Commit updates via matrix mutator
+      const currentBucks = row?row.bucks:0;
+      let streak = row? row.mStreak:0;
+      const isBroken = row? (now - row.mTimestamp > 1000 * 60 * 60 * 24 * 61) : false;
+      
+      if(isBroken){
+        streak = 0
+      } else{
+        streak++;
+      }
+      
+      const reward = Math.round(400 + Math.random() * 400 * ((streak - 1 < 0)? 0:(streak - 1)) + 82);
+      
       universalSet("amash", authorId, {
-        bucks: currentBucks + 400,
-        mTimestamp: now
+        bucks: currentBucks + reward,
+        mTimestamp: now, 
+        mStreak: streak
       });
 
       const embed = new EmbedBuilder()
