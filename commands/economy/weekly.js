@@ -52,7 +52,7 @@ module.exports = {
         streak++;
       }
       
-      const reward = Math.round(100 + Math.random() * 100 * ((streak - 1 < 0)? 0:(streak - 1)) + 21);
+      const reward = Math.round(100 + Math.random() * 100 * ((streak - 1 <= 0)? 0:((streak - 1) + 21)));
       
       universalSet("amash", authorId, {
         bucks: currentBucks + reward,
