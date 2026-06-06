@@ -51,9 +51,11 @@ module.exports = {
       }
 
       let streak = amashRow? amashRow.mStreak:0;
+      let broken;
       const isBroken = amashRow? (now - amashRow.mTimestamp > 1000 * 60 * 60 * 24 * 61) : false;
       
       if(isBroken){
+        broken = streak;
         streak = 0
       } else{
         streak++;
@@ -66,11 +68,13 @@ module.exports = {
         mTimestamp: now, 
         mStreak: streak
       });
-
+      
+      const extra = (isBroken)? `Oh no, you lost your streak of ${broken} months!`:`You're on a ${streak}-month streak!`;
+      
       // 5. Success Response Embed
       const embed = new EmbedBuilder()
         .setTitle("Monthly Amash Collected!")
-        .setDescription(`You received **${reward} Amash**! 💰\nCome back in 30 days.`)
+        .setDescription(`You received **${reward} Amash**!\n\n${extra}\nCome back in 30 days.`)
         .setColor('#57F287')
         .setTimestamp();
 

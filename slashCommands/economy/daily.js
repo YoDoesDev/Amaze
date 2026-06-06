@@ -41,10 +41,12 @@ module.exports = {
         universalCreate("amash", authorId);
       }
 
-       let streak = amashRow? amashRow.dStreak:0;
+      let streak = amashRow? amashRow.dStreak:0;
+      let broken;
       const isBroken = amashRow? (now - amashRow.dTimestamp > 1000 * 60 * 60 * 48) : false;
       
       if(isBroken){
+        broken = streak;
         streak = 0
       } else{
         streak++;
@@ -57,11 +59,13 @@ module.exports = {
         dTimestamp: now, 
         dStreak: streak
       });
+      
+      const extra = (isBroken)? `Oh no, you lost your streak of ${broken} days!`:`You're on a ${streak}-day streak!`;
 
       // 4. Success Response
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
-        .setDescription(`You receive **${reward} Amash**! Come back tomorrow!`)
+        .setDescription(`You receive **${reward} Amash**!\n\n${extra}\nCome back tomorrow!`)
         .setColor('#57F287');
 
       return interaction.editReply({ embeds: [embed] });

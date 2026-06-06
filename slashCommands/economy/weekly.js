@@ -51,10 +51,12 @@ module.exports = {
       }
       
       let streak = amashRow? amashRow.wStreak:0;
+      let broken;
       const isBroken = amashRow? (now - amashRow.wTimestamp > 1000 * 60 * 60 * 24 * 14) : false;
       
       if(isBroken){
-        streak = 0
+        broken = streak;
+        streak = 0;
       } else{
         streak++;
       }
@@ -66,11 +68,13 @@ module.exports = {
         wTimestamp: now, 
         wStreak: streak
       });
+      
+      const extra = (isBroken)? `Oh no, you lost your streak of ${broken} weeks!`:`You're on a ${streak}-week streak!`;
 
       // 5. Success Response Embed
       const embed = new EmbedBuilder()
         .setTitle("Weekly Reward Claimed!")
-        .setDescription(`You received **${reward} Amash**! 💰\nSee you again in 7 days.`) 
+        .setDescription(`You received **${reward} Amash**!\n\n${extra}\nSee you again in 7 days.`) 
         .setColor('#57F287')
         .setTimestamp();
 

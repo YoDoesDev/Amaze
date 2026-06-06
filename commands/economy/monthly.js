@@ -43,9 +43,11 @@ module.exports = {
       // 4. Safe fallback for new accounts to prevent crash
       const currentBucks = row?row.bucks:0;
       let streak = row? row.mStreak:0;
+      let broken;
       const isBroken = row? (now - row.mTimestamp > 1000 * 60 * 60 * 24 * 61) : false;
       
       if(isBroken){
+        broken = streak;
         streak = 0
       } else{
         streak++;
@@ -58,10 +60,12 @@ module.exports = {
         mTimestamp: now, 
         mStreak: streak
       });
+      
+      const extra = (isBroken)? `Oh no, you lost your streak of ${broken} months!`:`You're on a ${streak}-month streak!`;
 
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
-        .setDescription("You receive **400 Amash**! Come back next month!")
+        .setDescription(`You receive **${reward} Amash**!\n\n${extra}\n Come back next month!`)
         .setColor('#57F287');
 
       await message.reply({ embeds: [embed] });
