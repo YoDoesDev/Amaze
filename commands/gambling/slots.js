@@ -1,12 +1,16 @@
-const { db } = require("../../utils/database.js");
-const { emojis } = require("../../utils/config.js");
+ const { emojis } = require("../../utils/config.js");
+// 1. FIXED: Imported your matrix utility functions
+const {
+  universalGet, 
+  universalSet, 
+} = require('../../utils/database.js');
 
 // EV 0.85.
 module.exports = {
   name: "slots",
   aliases: ["s"],
   category: "Gambling",
-  cooldown: 15,
+  cooldown: 14,
   description: "Bet some money to win prizes!\n\nSyntax: `!slots <amash>`\n\n<> = REQUIRED",
   async execute(message, args) {
     const amt = parseInt(args[0]);
@@ -16,22 +20,25 @@ module.exports = {
       return message.reply("Please enter a valid amount of amash!");
     }
 
-    // 2. Database Check
+    // 2. Database Check using your Matrix Wrapper
     let monie;
     try {
-      const balData = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(message.author.id);
+      const balData = universalGet("amash", message.author.id);
       if (!balData) {
         return message.reply("You don't hold an Amash account yet! Use `!daily` to open one.");
       }
+      
       monie = balData.bucks;
       if (monie < amt) {
         return message.reply(`You don't have enough ${emojis.amash}!`);
       }
-      if(!message.guild.id == "1499416975531573429"){
-      if(amt > 250000){
-        return message.reply(`The maximum amount to gamble is 250,000 at a time!`);
-}
-}
+      
+      // FIXED: Corrected the logical operator precedence check for the guild restriction
+      if (message.guild.id !== "1499416975531573429") {
+        if (amt > 250000) {
+          return message.reply(`The maximum amount to gamble is 250,000 at a time!`);
+        }
+      }
     } catch (err) {
       console.log(err);
       return message.reply("A Database error occurred while checking amash.");
@@ -57,11 +64,9 @@ module.exports = {
     const r1 = roll();
     const r2 = roll();
     const r3 = roll();
-    const result = [r1, r2, r3];
 
     const isMatch = (a, b, c) => a === b && b === c;
-    const isTwoMatch = (a, b, c) =>
-      a === b || b === c || a === c;
+    const isTwoMatch = (a, b, c) => a === b || b === c || a === c;
 
     // 4. Calculate Payout using a Set
     let multiplier = 0;
@@ -81,13 +86,17 @@ module.exports = {
       winMessage = `💀 **Oof.** Better luck next time. Lost **${amt}** ${emojis.amash}.`;
     }
 
-    // 5. Update Database
+    // 5. Update Database via matrix mutator
     try {
       if (multiplier > 0) {
         const totalWin = Math.floor(amt * multiplier);
-        db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(totalWin, message.author.id);
+        universalSet("amash", message.author.id, {
+          bucks: monie + totalWin
+        });
       } else {
-        db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, message.author.id);
+        universalSet("amash", message.author.id, {
+          bucks: monie - amt
+        });
       }
     } catch (err) {
       console.log(err);

@@ -1,4 +1,4 @@
-const { db } = require("./database.js");
+const { db } = require("../database.js");
 const { EmbedBuilder } = require("discord.js");
 
 const taxes = async (medium, author) => {

@@ -1,6 +1,6 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+const { universalFetchAll } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
   name: 'portfolio', 
@@ -13,8 +13,7 @@ module.exports = {
 
     try {
       // 1. Fetch all rows (Returns an array immediately)
-      const rows = db.prepare(`SELECT invested, stocks, profit FROM investments WHERE investor = ?`)
-                     .all(target.id);
+      const rows = universalFetchAll("investments", target.id)
 
       // 2. Empty Check
       if (rows.length === 0) {

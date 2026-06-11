@@ -1,6 +1,7 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+// 1. FIXED: Supplied distinct dual-keys to the matrix wrappers where requested
+const { universalGet, universalSet, universalCreate, db } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -34,43 +35,61 @@ module.exports = {
         }
 
         try {
-            // 2. Fetch Portfolio Capacity and Cash States in one travel cycle
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT bucks FROM amash WHERE userid = ?) as bucks,
-                    (SELECT SUM(stocks) FROM investments WHERE investor = ?) as total_stocks,
-                    (SELECT stocklic FROM inventory WHERE userid = ?) as has_license
-            `).get(authorId, authorId, authorId);
+            // =======================================================
+            // 2. FETCH POOLS VIA MATRIX WRAPPERS & TARGETED AGGREGATE
+            // =======================================================
+            const amashRow = universalGet("amash", authorId);
+            const inventoryRow = universalGet("inventory", authorId);
+            
+            // FIXED: Passing investor and invested IDs as individual arguments
+            const investmentRow = universalGet("investments", authorId, targetUser.id);
 
-            const currentBucks = row?.bucks ?? 0;
-            const currentTotalStocks = row?.total_stocks ?? 0;
-            const hasLicense = row?.has_license ?? 0;
+            // HIGH PERFORMANCE: Let SQLite run a rapid index lookup for the portfolio sum
+            const sumRow = db.prepare(`SELECT SUM(stocks) as total_stocks FROM investments WHERE investor = ?`).get(authorId);
+
+            const currentBucks = amashRow?.bucks ?? 0;
+            const hasLicense = inventoryRow?.stocklic ?? 0;
+            const currentTotalStocks = sumRow?.total_stocks ?? 0;
+            const currentPositionStocks = investmentRow?.stocks ?? 0;
 
             // 3. Portfolio Capacity License Logic Check
             if (!hasLicense && (currentTotalStocks + amt) > 20) {
-                return interaction.editReply(`⚠️ **Stock Limit Reached!** Without a **Stock License**, you can only hold a total of **20 stocks**. You currently have **${currentTotalStocks}**. Buy a license in the `/shop` to expand your ceiling!`);
+                return interaction.editReply(`⚠️ **Stock Limit Reached!** Without a **Stock License**, you can only hold a total of **20 stocks**. You currently have **${currentTotalStocks}**. Buy a license in the \`/shop\` to expand your ceiling!`);
             }
 
             // 4. Liquidity / Funding Sufficiency Check
             if (currentBucks < totalCost) {
-                return interaction.editReply(`You don't have enough Amash! You need **${totalCost}** but you only have **${currentBucks}**.`);
+                return interaction.editReply(`You don't have enough Amash! You need **${totalCost.toLocaleString()}** but you only have **${currentBucks.toLocaleString()}**.`);
             }
 
-            // 5. Sequential Database Mutations
-            db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(totalCost, authorId);
+            // =======================================================
+            // 5. EXECUTE ATOMIC TRANSACTION MUTATIONS (MATRIX WRAPPERS)
+            // =======================================================
+            
+            // Deduct purchase cost from buyer account
+            universalSet("amash", authorId, {
+                bucks: currentBucks - totalCost
+            });
 
-            db.prepare(`
-                INSERT INTO investments (investor, invested, stocks, lastpurchase) 
-                VALUES (?, ?, ?, ?)
-                ON CONFLICT (investor, invested) 
-                DO UPDATE SET stocks = stocks + excluded.stocks, lastpurchase = excluded.lastpurchase
-            `).run(authorId, targetUser.id, amt, now);
+            // FIXED: Passing separate conditional arguments for table mapping instantiation
+            if (!investmentRow) {
+                universalCreate("investments", authorId, targetUser.id);
+            }
+
+            // FIXED: Passed dual key references cleanly into universalSet mutation parameters
+            universalSet("investments", authorId, {
+                investor: authorId,
+                invested: targetUser.id,
+                stocks: currentPositionStocks + amt,
+                lastpurchase: now
+            }, targetUser.id);
 
             // 6. Success Output Manifest Construction
             const successMsg = new EmbedBuilder()
                 .setColor('#10E647')
                 .setTitle('Purchase Successful! 📈')
-                .setDescription(`Spent: **${totalCost} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: \`4% fee\`\n🕒 < 2 hrs: \`2% fee\`\n🕒 > 2 hrs: \`1% fee\`\n\n**NOTE**: The exit timer resets every single time you scale your position on this person.`);
+                .setDescription(`Spent: **${totalCost.toLocaleString()} Amash**\nBought: **${amt}** stocks of **${targetUser.username}**.\nTotal Portfolio: **${currentTotalStocks + amt}** stocks.\n\n**Market Stability Fees (Exit Tax):**\n🕒 < 30 mins: \`4% fee\`\n🕒 < 2 hrs: \`2% fee\`\n🕒 > 2 hrs: \`1% fee\`\n\n**NOTE**: The exit timer resets every single time you scale your position on this person.`)
+                .setTimestamp();
 
             return interaction.editReply({ embeds: [successMsg] });
 
@@ -80,4 +99,4 @@ module.exports = {
             return interaction.editReply("A database error occurred during the transaction.");
         }
     }
-}
+};

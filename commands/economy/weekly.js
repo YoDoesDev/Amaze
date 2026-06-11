@@ -1,5 +1,9 @@
-const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+ const { EmbedBuilder } = require('discord.js');
+const {
+  universalGet, 
+  universalSet, 
+  universalCreate, 
+} = require('../../utils/database.js');
 
 module.exports = {
   name: 'weekly', 
@@ -13,11 +17,11 @@ module.exports = {
     const cooldown = 604800000; // 7 days in ms
 
     try {
-      // 1. Check current timestamp
-      const row = db.prepare(`SELECT wTimestamp FROM amash WHERE userid = ?`).get(authorId);
+      // 1. Check current database state using your matrix wrapper
+      const row = universalGet("amash", authorId);
       
       // 2. Cooldown Logic
-      if (row && (now - row.wTimestamp < cooldown)) {
+      if (row && row.wTimestamp && (now - row.wTimestamp < cooldown)) {
         const remaining = cooldown - (now - row.wTimestamp);
         const days = Math.floor(remaining / 86400000);
         const hrs = Math.floor((remaining % 86400000) / 3600000);
@@ -30,19 +34,37 @@ module.exports = {
         return message.reply(`Be patient! You can claim your weekly in ${timeStr}.`);
       }
 
-      // 3. Atomic Update
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, wTimestamp) 
-        VALUES (?, ?, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 100,
-          wTimestamp = excluded.wTimestamp
-      `).run(authorId, 100, now);
-
+      // 3. Initialize missing account row (The custom inline ON CONFLICT check)
+      if (!row) {
+        universalCreate("amash", authorId);
+      }
+      
+      // 4. Safe fallback for new accounts to prevent crash
+      const currentBucks = row?row.bucks:0;
+      let streak = row? row.wStreak:0;
+      let broken;
+      const isBroken = row? (now - row.wTimestamp > 1000 * 60 * 60 * 24 * 14) : false;
+      
+      if(isBroken){
+        broken = streak;
+        streak = 0
+      } else{
+        streak++;
+      }
+      
+      const reward = Math.round(100 + Math.random() * 10 * ((streak - 1 < 0)? 0:((streak) + 21)));
+      
+      universalSet("amash", authorId, {
+        bucks: currentBucks + reward,
+        wTimestamp: now, 
+        wStreak: streak
+      });
+      
+      const extra = (isBroken)? `Oh no, you lost your streak of ${broken} weeks!`:`You're on a ${streak}-week streak!`;
+      
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
-        .setDescription("You receive **100 Amash**! Come back next week!")
+        .setDescription(`You receive **${reward} Amash**!\n\n${extra}\nCome back next week!`)
         .setColor('#57F287');
 
       await message.reply({ embeds: [embed] });
@@ -52,4 +74,4 @@ module.exports = {
       message.reply("A database error occurred while claiming your weekly reward.");
     }
   }
-}
+};

@@ -1,4 +1,6 @@
-const { db } = require('../../utils/database.js');
+const { EmbedBuilder } = require('discord.js');
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     name: 'defame',
@@ -16,56 +18,82 @@ module.exports = {
         if (targetUser.bot) return message.reply("Bots don't have reputations.");
 
         try {
-            // 1. Fetch all logic variables in one go
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT pr_tp FROM inventory WHERE userid = ?) as target_shield,
-                    (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
-                    (SELECT ddbl_tp FROM inventory WHERE userid = ?) as author_doubler
-            `).get(targetUser.id, authorId, targetUser.id, authorId);
+            // =======================================================
+            // 1. FETCH LOGIC VIA DUAL-KEY MATRIX WRAPPERS
+            // =======================================================
+            const targetInventory = universalGet("inventory", targetUser.id);
+            const authorInventory = universalGet("inventory", authorId);
+            
+            // FIXED: Passing separate keys for the composite vouch_history table
+            const vouchRow = universalGet("vouch_history", authorId, targetUser.id);
 
-            // 2. Shield Check
-            if (row?.target_shield && now < row.target_shield) {
+            const targetShield = targetInventory ? targetInventory.pr_tp : null;
+            const authorDoubler = authorInventory ? authorInventory.ddbl_tp : null;
+            const lastVouch = vouchRow ? vouchRow.timestamp : null;
+
+            // 2. Shield & Cooldown Checks
+            if (targetShield && now < targetShield) {
                 return message.reply(`🛡️ **PR Shield Active!** ${targetUser.username} is protected.`);
             }
 
-            // 3. Cooldown Check
-            if (row?.last_vouch && (now - row.last_vouch) < cooldownTime) {
-                const timeLeftMs = cooldownTime - (now - row.last_vouch);
+            if (lastVouch && (now - lastVouch) < cooldownTime) {
+                const timeLeftMs = cooldownTime - (now - lastVouch);
                 const hrs = Math.floor(timeLeftMs / 3600000);
                 const mins = Math.floor((timeLeftMs % 3600000) / 60000);
                 return message.reply(`Slow down! Cooldown active for another **${hrs}h ${mins}m**.`);
             }
 
-            const multiplier = (row?.author_doubler && now < row.author_doubler) ? 2 : 1;
+            const multiplier = (authorDoubler && now < authorDoubler) ? 2 : 1;
 
-            // 4. Atomic Execution (Sequential, no serialize needed)
-            // Lock the cooldown first
-            db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
-
-            // Update Reputation
-            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points - ? WHERE userid = ?`).run(multiplier, targetUser.id);
-
+            // =======================================================
+            // 3. EXECUTION MATRIX MUTATIONS (DUAL-KEY DISPATCH)
+            // =======================================================
             
-            // Impact investors (The "Stock Market" crash logic)
-            
-              db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
-              
-            
-            // 5. Fetch final points for the response
-            const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
-
-
-            if(message.guild.id == "1226181188054548500"){
-                db.prepare(`UPDATE amash SET bucks = bucks - 100 WHERE userid = ?`).run(message.author.id);
-                return message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            if (!vouchRow) {
+                // FIXED: Passing separate keys to universalCreate
+                universalCreate("vouch_history", authorId, targetUser.id);
             }
-            message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
+            // FIXED: Passing separate keys to universalSet
+            universalSet("vouch_history", authorId, {
+                timestamp: now
+            }, targetUser.id);
+
+            // Update Target Reputation
+            const repRow = universalGet("reputation", targetUser.id);
+            if (!repRow) {
+                universalCreate("reputation", targetUser.id);
+            }
+            const currentPoints = repRow?.points ?? 0;
+            const finalPoints = currentPoints - multiplier;
+            
+            universalSet("reputation", targetUser.id, {
+                points: finalPoints
+            });
+
+            // FIXED: Impact investors (Fetch dual-key for investments table)
+            const investmentRow = universalGet("investments", authorId, targetUser.id);
+            if (investmentRow) {
+                const currentProfit = investmentRow.profit ?? 0;
+                const stocks = investmentRow.stocks ?? 0;
+                // FIXED: Pass separate keys to universalSet for investments
+                universalSet("investments", authorId, {
+                    profit: currentProfit - (stocks * (5 * multiplier))
+                }, targetUser.id);
+            }
+
+            // Server-specific tax
+            if (message.guild.id === "1226181188054548500") {
+                const amashRow = universalGet("amash", authorId);
+                const currentBucks = amashRow?.bucks ?? 0;
+                universalSet("amash", authorId, { bucks: currentBucks - 100 });
+                return message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalPoints}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            }
+
+            message.channel.send(`🥀 **Defamed!** ${targetUser.username} now has **${finalPoints}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
 
         } catch (err) {
             console.error("Defame Error:", err);
-            cooldownHandler.clearCooldown(message.author.id, command);
+            clearCooldown(authorId, module.exports);
             message.reply("A database error occurred during the defamation process.");
         }
     }

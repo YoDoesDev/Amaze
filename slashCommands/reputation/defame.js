@@ -1,83 +1,84 @@
-const { SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("defame")
-        .setDescription("Defame a user to reduce their reputation points (8-hour cooldown)")
+        .setName('defame')
+        .setDescription('Defame a user (8-hour cooldown per person). Costs 100 Amash in some servers.')
         .addUserOption(option => 
-            option.setName("target")
-                .setDescription("The user you want to defame")
+            option.setName('target')
+                .setDescription('The user to defame')
                 .setRequired(true)
         ),
-    category: 'Reputation', 
+    category: 'Reputation',
     cooldown: 10,
 
-    async execute(interaction) { 
-        const targetUser = interaction.options.getUser("target");
+    async execute(interaction) {
+        const targetUser = interaction.options.getUser('target');
         const authorId = interaction.user.id;
         const now = Date.now();
-        const cooldownTime = 8 * 60 * 60 * 1000; // 8 Hours in ms
+        const cooldownTime = 8 * 60 * 60 * 1000; // 8 Hours
 
-        // 1. Initial Checks
-        if (targetUser.id === authorId) {
-            return interaction.editReply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
-        }
-        if (targetUser.bot) {
-            return interaction.editReply("Bots don't have reputations.");
-        }
+        if (targetUser.id === authorId) return interaction.editReply("Self-defaming? Chin up, soldier, don't be too hard on yourself.");
+        if (targetUser.bot) return interaction.editReply("Bots don't have reputations.");
 
         try {
-            // 2. Fetch all logic variables in one go
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT pr_tp FROM inventory WHERE userid = ?) as target_shield,
-                    (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
-                    (SELECT ddbl_tp FROM inventory WHERE userid = ?) as author_doubler
-            `).get(targetUser.id, authorId, targetUser.id, authorId);
+            // 1. FETCH DATA VIA DUAL-KEY MATRIX WRAPPERS
+            const targetInventory = universalGet("inventory", targetUser.id);
+            const authorInventory = universalGet("inventory", authorId);
+            const vouchRow = universalGet("vouch_history", authorId, targetUser.id);
 
-            // 3. Shield Check
-            if (row?.target_shield && now < row.target_shield) {
+            const targetShield = targetInventory?.pr_tp ?? null;
+            const authorDoubler = authorInventory?.ddbl_tp ?? null;
+            const lastVouch = vouchRow?.timestamp ?? null;
+
+            // 2. Constraints
+            if (targetShield && now < targetShield) {
                 return interaction.editReply(`🛡️ **PR Shield Active!** ${targetUser.username} is protected.`);
             }
 
-            // 4. Cooldown Check
-            if (row?.last_vouch && (now - row.last_vouch) < cooldownTime) {
-                const timeLeftMs = cooldownTime - (now - row.last_vouch);
+            if (lastVouch && (now - lastVouch) < cooldownTime) {
+                const timeLeftMs = cooldownTime - (now - lastVouch);
                 const hrs = Math.floor(timeLeftMs / 3600000);
                 const mins = Math.floor((timeLeftMs % 3600000) / 60000);
                 return interaction.editReply(`Slow down! Cooldown active for another **${hrs}h ${mins}m**.`);
             }
 
-            const multiplier = (row?.author_doubler && now < row.author_doubler) ? 2 : 1;
+            const multiplier = (authorDoubler && now < authorDoubler) ? 2 : 1;
 
-            // 5. Atomic Execution
-            // Lock the cooldown first
-            db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
+            // 3. EXECUTION
+            if (!vouchRow) universalCreate("vouch_history", authorId, targetUser.id);
+            universalSet("vouch_history", authorId, { timestamp: now }, targetUser.id);
 
-            // Update Reputation
-            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points - ? WHERE userid = ?`).run(multiplier, targetUser.id);
+            const repRow = universalGet("reputation", targetUser.id);
+            if (!repRow) universalCreate("reputation", targetUser.id);
+            
+            const finalPoints = (repRow?.points ?? 0) - multiplier;
+            universalSet("reputation", targetUser.id, { points: finalPoints });
 
-            // Impact investors (The "Stock Market" crash logic)
-            db.prepare(`UPDATE investments SET profit = profit - (stocks * ?) WHERE invested = ?`).run(5 * multiplier, targetUser.id);
-              
-            // Fetch final points for response
-            const finalRep = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
-
-            // 6. Handle Server-Specific Currency Penalties
-            if (interaction.guild.id === "1226181188054548500") {
-                db.prepare(`UPDATE amash SET bucks = bucks - 100 WHERE userid = ?`).run(authorId);
-                return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}\nCosted 100 Amash.`);
+            // Impact investors
+            const investmentRow = universalGet("investments", authorId, targetUser.id);
+            if (investmentRow) {
+                universalSet("investments", authorId, {
+                    profit: investmentRow.profit - (investmentRow.stocks * (5 * multiplier))
+                }, targetUser.id);
             }
 
-            return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalRep?.points ?? 0}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}`);
+            // Server-specific tax
+            let extraInfo = "";
+            if (interaction.guildId === "1226181188054548500") {
+                const amashRow = universalGet("amash", authorId);
+                universalSet("amash", authorId, { bucks: (amashRow?.bucks ?? 0) - 100 });
+                extraInfo = "\nCosted 100 Amash.";
+            }
+
+            return interaction.editReply(`🥀 **Defamed!** ${targetUser.username} now has **${finalPoints}** rep. ${multiplier > 1 ? '↘️ **(x2 Power)**' : ''}${extraInfo}`);
 
         } catch (err) {
-            console.error("Defame Error:", err);
+            console.error("Defame Slash Error:", err);
             clearCooldown(authorId, module.exports);
-            return interaction.editReply("A database error occurred during the defamation process.");
+            return interaction.editReply("A database error occurred.");
         }
     }
 };

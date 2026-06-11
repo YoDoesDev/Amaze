@@ -1,5 +1,9 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+const {
+  universalGet, 
+  universalSet, 
+  universalCreate, 
+} = require('../../utils/database.js');
 
 module.exports = {
   name: 'daily', 
@@ -14,8 +18,7 @@ module.exports = {
 
     try {
       // 1. Check current timestamp
-      const row = db.prepare(`SELECT dTimestamp FROM amash WHERE userid = ?`).get(authorId);
-      
+      const row = universalGet("amash", authorId);
       // 2. Cooldown Logic
       if (row && (now - row.dTimestamp < cooldown)) {
         const remaining = cooldown - (now - row.dTimestamp);
@@ -27,18 +30,35 @@ module.exports = {
 
       // 3. Update or Insert Data
       // Since it's synchronous, this runs exactly when the check passes
-      db.prepare(`
-        INSERT INTO amash (userid, bucks, dTimestamp) 
-        VALUES (?, ?, ?)
-        ON CONFLICT (userid) 
-        DO UPDATE SET 
-          bucks = bucks + 40,
-          dTimestamp = excluded.dTimestamp
-      `).run(authorId, 40, now);
+      
+      if(!row) universalCreate("amash", authorId);
+      
+      const currentBucks = row?row.bucks:0;
+      let streak = row? row.dStreak:0;
+      let broken;
+      const isBroken = row? (now - row.dTimestamp > 1000 * 60 * 60 * 48) : false;
+      
+      if(isBroken){
+        broken = streak;
+        streak = 0
+      } else{
+        streak++;
+      }
+      
+      const reward = Math.round(40 + Math.random() * 4 * ((streak - 1 < 0)? 0:((streak) + 13)));
+      
+      universalSet("amash", authorId, {
+        bucks: currentBucks + reward,
+        dTimestamp: now, 
+        dStreak: streak
+      });
 
+
+      const extra = (isBroken)? `Oh no, you lost your streak of ${broken} days!`:`You're on a ${streak} day streak!`;
+      
       const embed = new EmbedBuilder()
         .setTitle("Amash collected!")
-        .setDescription("You receive **40 Amash**! Come back tomorrow!")
+        .setDescription(`You receive **${reward} Amash**.\n\n${extra}\n Come back tomorrow!`)
         .setColor('#57F287');
 
       message.reply({ embeds: [embed] });

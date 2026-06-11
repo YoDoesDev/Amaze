@@ -1,76 +1,76 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("vouch")
-        .setDescription("Vouch for a user to increase their reputation (8-hour cooldown)")
+        .setName('vouch')
+        .setDescription('Vouch for a user to increase their reputation (8-hour cooldown).')
         .addUserOption(option => 
-            option.setName("target")
-                .setDescription("The user you want to vouch for")
+            option.setName('target')
+                .setDescription('The user to vouch for')
                 .setRequired(true)
         ),
-    category: 'Reputation', 
+    category: 'Reputation',
     cooldown: 10,
 
     async execute(interaction) {
-        const targetUser = interaction.options.getUser("target");
+        const targetUser = interaction.options.getUser('target');
         const authorId = interaction.user.id;
         const now = Date.now();
-        const cooldownTime = 8 * 60 * 60 * 1000;
+        const cooldownTime = 8 * 60 * 60 * 1000; // 8 Hours
 
-        // 1. Validations
-        if (targetUser.id === authorId) {
-            return interaction.editReply("Self-vouching? Focus on the work, not the praise.");
-        }
-        if (targetUser.bot) {
-            return interaction.editReply("Bots don't have reputations.");
-        }
+        if (targetUser.id === authorId) return interaction.editReply("Self-vouching? Focus on the work, not the praise.");
+        if (targetUser.bot) return interaction.editReply("Bots don't have reputations.");
 
         try {
-            // 2. Fetch History and Doubler Status
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT timestamp FROM vouch_history WHERE voucher_id = ? AND receiver_id = ?) as last_vouch,
-                    (SELECT dblv_tp FROM inventory WHERE userid = ?) as vouch_doubler
-            `).get(authorId, targetUser.id, authorId);
+            // 1. FETCH LOGIC VIA DUAL-KEY MATRIX
+            const authorInventory = universalGet("inventory", authorId);
+            const vouchRow = universalGet("vouch_history", authorId, targetUser.id);
+            
+            const lastVouch = vouchRow?.timestamp ?? null;
+            const vouchDoubler = authorInventory?.dblv_tp ?? null;
 
-            // 3. Cooldown Logic
-            if (row?.last_vouch && (now - row.last_vouch) < cooldownTime) {
-                const timeLeftMs = cooldownTime - (now - row.last_vouch);
+            // 2. Cooldown Check
+            if (lastVouch && (now - lastVouch) < cooldownTime) {
+                const timeLeftMs = cooldownTime - (now - lastVouch);
                 const hrs = Math.floor(timeLeftMs / 3600000);
                 const mins = Math.floor((timeLeftMs % 3600000) / 60000);
-                return interaction.editReply(`This user's reputation was recently influenced. Wait **${hrs}h ${mins}m** to fame them again.`);
+                return interaction.editReply(`This user's reputation was recently influenced. Wait **${hrs}h ${mins}m** to vouch again.`);
             }
 
-            // 4. Check for Doubler
-            const isDoubled = row?.vouch_doubler && now < row.vouch_doubler;
+            const isDoubled = vouchDoubler && now < vouchDoubler;
             const multiplier = isDoubled ? 2 : 1;
 
-            // 5. Database Updates (The Transfer)
-            // Update history
-            db.prepare(`INSERT OR REPLACE INTO vouch_history (voucher_id, receiver_id, timestamp) VALUES (?, ?, ?)`).run(authorId, targetUser.id, now);
+            // 3. EXECUTION MUTATIONS (DUAL-KEY DISPATCH)
+            if (!vouchRow) universalCreate("vouch_history", authorId, targetUser.id);
+            
+            universalSet("vouch_history", authorId, { timestamp: now }, targetUser.id);
 
-            // Ensure reputation row exists and Update
-            db.prepare(`INSERT OR IGNORE INTO reputation (userid, points) VALUES (?, 0)`).run(targetUser.id);
-            db.prepare(`UPDATE reputation SET points = points + ? WHERE userid = ?`).run(multiplier, targetUser.id);
+            // Update Target Reputation
+            const repRow = universalGet("reputation", targetUser.id);
+            if (!repRow) universalCreate("reputation", targetUser.id);
+            
+            const finalPoints = (repRow?.points ?? 0) + multiplier;
+            universalSet("reputation", targetUser.id, { points: finalPoints });
 
-            // Update Investor Profits (Multiplied)
-            const profitGain = 5 * multiplier;
-            db.prepare(`UPDATE investments SET profit = profit + (stocks * ?) WHERE invested = ?`).run(profitGain, targetUser.id);
+            // Update Investor Profits (Must use dual-key for investments table)
+            // Note: Fixed to fetch by (investor, invested) per schema
+            const investmentRow = universalGet("investments", authorId, targetUser.id);
+            if (investmentRow) {
+                universalSet("investments", authorId, {
+                    profit: (investmentRow.profit ?? 0) + (investmentRow.stocks * (5 * multiplier))
+                }, targetUser.id);
+            }
 
-            // 6. Fetch Final Result and Respond
-            const repRow = db.prepare(`SELECT points FROM reputation WHERE userid = ?`).get(targetUser.id);
+            // 4. Output Response
+            let msg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${finalPoints}** reputation points.`;
+            if (isDoubled) msg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${msg}`;
 
-            let responseMsg = `✨ **Vouch Recorded!** ${targetUser.username} now has **${repRow?.points ?? 0}** reputation points.`;
-            if (isDoubled) responseMsg = `⏭️ **VOUCH DOUBLER ACTIVE!** ${responseMsg}`;
-
-            return interaction.editReply(responseMsg);
+            return interaction.editReply(msg);
 
         } catch (err) {
-            console.error("Vouch Command Error:", err);
-            // If the command fails, we clear the internal command cooldown
+            console.error("Vouch Slash Error:", err);
             clearCooldown(authorId, module.exports);
             return interaction.editReply("A database error occurred while recording the vouch.");
         }

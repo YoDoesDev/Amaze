@@ -1,6 +1,7 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+// 1. FIXED: Matrix wrappers are now used with dual-key logic
+const { universalGet, universalSet, universalDelete } = require('../../utils/database.js');
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     name: 'sellstocks',
@@ -24,15 +25,20 @@ module.exports = {
         }
 
         try {
-            // 1. Fetch Investment Data
-            const row = db.prepare(`SELECT stocks, profit, lastpurchase FROM investments WHERE invested = ? AND investor = ?`)
-                          .get(target.id, authorId);
+            // =======================================================
+            // 2. FETCH DATA VIA DUAL-KEY WRAPPERS
+            // =======================================================
+            const amashRow = universalGet("amash", authorId);
+            // FIXED: Passing separate keys to the dual-key wrapper
+            const row = universalGet("investments", authorId, target.id);
 
             if (!row || row.stocks <= 0) {
                 return message.reply(`You have not invested in ${target.username}!`);
             }
 
-            // 2. Tax Logic (Time-based fees)
+            const currentBucks = amashRow?.bucks ?? 0;
+
+            // 3. Tax Logic
             const timeHeld = now - row.lastpurchase;
             let tFee;
             let feeLabel;
@@ -48,11 +54,11 @@ module.exports = {
                 feeLabel = "1% (Market Standard)";
             }
 
-            // 3. Amount Logic
+            // 4. Amount Logic
             let numToSell = noOfStocksInput.toLowerCase() === 'all' ? row.stocks : parseInt(noOfStocksInput);
             if (numToSell > row.stocks) return message.reply(`You only have ${row.stocks} stocks!`);
 
-            // 4. Financial Calculations
+            // 5. Financial Calculations
             const rawProfitForTheseStocks = (row.profit / row.stocks) * numToSell;
             const principalValue = numToSell * 70;
             const grossValue = principalValue + rawProfitForTheseStocks;
@@ -61,18 +67,27 @@ module.exports = {
             const finalPayout = Math.round(grossValue - taxAmount);
             const profitLoss = finalPayout - principalValue;
 
-            // 5. Atomic Database Updates
+            // =======================================================
+            // 6. EXECUTION MATRIX MUTATIONS (DUAL-KEY DISPATCH)
+            // =======================================================
+            
             if (numToSell >= row.stocks) {
-                db.prepare(`DELETE FROM investments WHERE investor = ? AND invested = ?`).run(authorId, target.id);
+                // FIXED: Passing separate keys to universalDelete
+                universalDelete("investments", authorId, target.id);
             } else {
-                db.prepare(`UPDATE investments SET stocks = stocks - ?, profit = profit - ? WHERE investor = ? AND invested = ?`)
-                  .run(numToSell, rawProfitForTheseStocks, authorId, target.id);
+                // FIXED: Passing separate keys to universalSet
+                universalSet("investments", authorId, {
+                    stocks: row.stocks - numToSell,
+                    profit: row.profit - rawProfitForTheseStocks
+                }, target.id);
             }
 
-            // Add the money to balance
-            db.prepare(`UPDATE amash SET bucks = bucks + ? WHERE userid = ?`).run(finalPayout, authorId);
+            // Pay the final cash balance
+            universalSet("amash", authorId, {
+                bucks: currentBucks + finalPayout
+            });
 
-            // 6. Response Embed
+            // 7. Response Embed
             const keyword = profitLoss > 0 ? "profit of" : (profitLoss === 0 ? "break-even of" : "loss of");
             const color = profitLoss >= 0 ? '#10E647' : '#E61010';
 
@@ -81,9 +96,9 @@ module.exports = {
                 .setColor(color)
                 .setDescription(`Sold **${numToSell}** stocks of **${target.username}**.\n\n` +
                                 `**Market Tax:** ${feeLabel}\n` +
-                                `**Tax Paid:** -${taxAmount} Amash\n` +
-                                `**Final Payout:** ${finalPayout} Amash\n\n` +
-                                `You hit a ${keyword} **${Math.abs(Math.round(profitLoss))}** Amash.`)
+                                `**Tax Paid:** -${taxAmount.toLocaleString()} Amash\n` +
+                                `**Final Payout:** ${finalPayout.toLocaleString()} Amash\n\n` +
+                                `You hit a ${keyword} **${Math.abs(Math.round(profitLoss)).toLocaleString()}** Amash.`)
                 .setTimestamp();
             
             await message.reply({ embeds: [embed] });

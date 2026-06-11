@@ -1,130 +1,151 @@
-const { ButtonBuilder, ButtonStyle, ActionRowBuilder, EmbedBuilder, ComponentType } = require('discord.js');
+const { 
+  SlashCommandBuilder, 
+  ButtonBuilder, 
+  ButtonStyle, 
+  ActionRowBuilder, 
+  EmbedBuilder, 
+  ComponentType 
+} = require('discord.js');
 const { emojis } = require('../../utils/config.js');
 const ongGames = new Map();
 
 module.exports = {
-  name: "rps", 
-  category: "Games", 
-  description: "Play rock paper scissors with friends or a bot.\n\nSyntax: `!rps <rounds> [@user/bot]`\n<> = REQUIRED", 
+  data: new SlashCommandBuilder()
+    .setName("rps")
+    .setDescription("Play rock paper scissors with friends or a bot.")
+    .addIntegerOption(option =>
+      option.setName("rounds")
+        .setDescription("Number of rounds to play (1-10)")
+        .setRequired(true)
+    )
+    .addUserOption(option =>
+      option.setName("opponent")
+        .setDescription("The user you want to duel (leave blank to play against the bot)")
+        .setRequired(false)
+    ),
+
+  category: "Games",
   cooldown: 10,
-  async execute(message, args){
+
+  async execute(interaction) {
+    // Assuming your main listener has already done: await interaction.deferReply();
     
+    const totalRounds = interaction.options.getInteger("rounds");
+    const targetUser = interaction.options.getUser("opponent");
+
     // 1. INPUT VALIDATION
-    if(args.length < 2 || !Number.isInteger(parseInt(args[0]))){
-      return message.reply({embeds: [
-        new EmbedBuilder()
-        .setTitle("One or two missing/invalid arguments!")
-        .setDescription("Correct Syntax: `!rps <rounds> [@user/bot]`")
-        .setColor('#ED4245')
-      ]});
+    if (totalRounds <= 0 || totalRounds > 10) {
+      return interaction.editReply({ 
+        content: "Please keep the rounds between 1 and 10 to prevent channel spam!" 
+      });
     }
 
-    const totalRounds = parseInt(args[0]);
-    if (totalRounds <= 0 || totalRounds > 10) {
-      return message.reply("Please keep the rounds between 1 and 10 to prevent channel spam!");
+    if (ongGames.has(interaction.channel.id)) {
+      return interaction.editReply({ 
+        content: "There is already a game going on in this channel. Try somewhere else maybe?" 
+      });
     }
-    
-    if(ongGames.has(message.channel.id)){
-      return message.reply("There is already a game going on in this channel. Try somewhere else maybe?");
-    }
-    
-    // 2. CONFIG OBJECT (Preserving your blueprint)
+
+    // 2. CONFIG OBJECT SETUP
     const game = {
-      self: message.author.username,
-      selfId: message.author.id,
-      opp: "bot", 
+      self: interaction.user.username,
+      selfId: interaction.user.id,
+      opp: "bot",
       oppId: "bot",
-      isAccepted: false, 
-      channel: message.channel.id, 
+      isAccepted: false,
+      channel: interaction.channel.id,
       rounds: totalRounds,
       crntRound: 1,
-      selfChoice: "TBD", 
-      oppChoice: "TBD", 
+      selfChoice: "TBD",
+      oppChoice: "TBD",
       selfW: 0,
       oppW: 0,
       selfAfk: 0,
       oppAfk: 0,
       expiresAt: 120000 // 2 minutes
     };
-    
-    const target = message.mentions.users.first();
 
-    if (args[1].toLowerCase() === 'bot') {
+    if (!targetUser) {
       game.opp = "bot";
       game.oppId = "bot";
-      game.isAccepted = true; // Bot accepts instantly
+      game.isAccepted = true;
     } else {
-      if (!target) {
-        return message.reply("Please mention a valid opponent or type `bot`!");
+      if (targetUser.id === interaction.user.id) {
+        return interaction.editReply({ content: "Aww man, see this loner, play with the bot dude 🥀" });
       }
-      if (target.id === message.author.id) {
-        return message.reply("Aww man, see this loner, play with the bot dude 🥀");
+      if (targetUser.bot) {
+        return interaction.editReply({ content: "You can't play against external bots!" });
       }
-      if (target.bot) {
-        return message.reply("You can't play against external bots!");
-      }
-      game.opp = target.username;
-      game.oppId = target.id;
+      game.opp = targetUser.username;
+      game.oppId = targetUser.id;
     }
-    
-    ongGames.set(message.channel.id, game);
+
+    ongGames.set(interaction.channel.id, game);
 
     // =======================================================
-    // PHASE 1: MULTIPLAYER CHALLENGE LOBBY ACCEPT/DECLINE
+    // PHASE 1: MULTIPLAYER CHALLENGE LOBBY (Using editReply)
     // =======================================================
-    if(game.opp !== "bot"){
+    if (game.opp !== "bot") {
       const challEmbed = new EmbedBuilder()
         .setTitle("Challenge incoming!")
-        .setDescription(`<@${target.id}>, <@${message.author.id}> challenges you to a game of Rock, Paper and Scissors.\n\n**Rounds:** ${game.rounds}\nDo you wanna accept or decline?`)
+        .setDescription(`<@${targetUser.id}>, <@${interaction.user.id}> challenges you to a game of Rock, Paper and Scissors.\n\n**Rounds:** ${game.rounds}\nDo you wanna accept or decline?`)
         .setColor('#A20FB7')
         .setTimestamp();
-    
+
       const challRow = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("accept").setLabel("Accept").setEmoji("✅").setStyle(ButtonStyle.Success), 
+        new ButtonBuilder().setCustomId("accept").setLabel("Accept").setEmoji("✅").setStyle(ButtonStyle.Success),
         new ButtonBuilder().setCustomId("decline").setLabel("Decline").setEmoji("❌").setStyle(ButtonStyle.Danger)
       );
-    
-      const askMessage = await message.reply({
-        content: `<@${target.id}>`, 
-        embeds: [challEmbed], 
+
+      // editReply edits the original deferred loading message and returns the response object
+      const askMessage = await interaction.editReply({
+        content: `<@${targetUser.id}>`,
+        embeds: [challEmbed],
         components: [challRow]
       });
-    
+
       try {
-        const interaction = await askMessage.awaitMessageComponent({
-          filter: i => i.user.id === target.id,
-          time: game.expiresAt 
+        const acceptInteraction = await askMessage.awaitMessageComponent({
+          filter: i => i.user.id === targetUser.id,
+          time: game.expiresAt
         });
 
-        await interaction.deferUpdate();
+        await acceptInteraction.deferUpdate();
 
-        if (interaction.customId === "decline") {
-          ongGames.delete(message.channel.id);
-          return askMessage.edit({ content: "Challenge declined!", embeds: [], components: [] });
+        if (acceptInteraction.customId === "decline") {
+          ongGames.delete(interaction.channel.id);
+          return interaction.editReply({ content: "Challenge declined!", embeds: [], components: [] });
         }
 
         game.isAccepted = true;
-        await askMessage.delete().catch(() => null); // Clear out the invite message
+        await interaction.deleteReply().catch(() => null); // Clean up the lobby message
 
       } catch (err) {
-        ongGames.delete(message.channel.id);
-        return askMessage.edit({ content: "⌛ Match timed out!", embeds: [], components: [] });
+        ongGames.delete(interaction.channel.id);
+        return interaction.editReply({ content: "⌛ Match timed out!", embeds: [], components: [] });
       }
+    } else {
+      // For a bot match, update the deferred reply text and clear it immediately
+      await interaction.editReply({ content: "🤖 Starting a match against Amaze Bot..." }).catch(() => null);
+      setTimeout(async () => {
+        await interaction.deleteReply().catch(() => null);
+      }, 1500);
     }
 
     // =======================================================
     // PHASE 2: RUNTIME MULTI-ROUND GAME ENGINE
     // =======================================================
-    runGameEngine(message, game);
+    // (Note: Keep using interaction.channel.send here so the actual game 
+    // loops can delete and resend fresh messages per round cleanly!)
+    runGameEngine(interaction, game);
   }
 };
 
 // --- CORE GAME ENGINE LOOP ---
-async function runGameEngine(message, game) {
+async function runGameEngine(interaction, game) {
   const weapons = ['rock', 'paper', 'scissors'];
   const winConditions = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
 
-  // Setup visual attack components
   const weaponRow = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId("p_rock").setLabel("Rock").setEmoji("🪨").setStyle(ButtonStyle.Primary),
     new ButtonBuilder().setCustomId("p_paper").setLabel("Paper").setEmoji("📄").setStyle(ButtonStyle.Primary),
@@ -147,61 +168,53 @@ async function runGameEngine(message, game) {
       .setTimestamp();
   };
 
-  const gameMessage = await message.channel.send({
+  const gameMessage = await interaction.channel.send({
     embeds: [renderStatusEmbed()],
     components: [weaponRow]
   });
 
   const collector = gameMessage.createMessageComponentCollector({
     componentType: ComponentType.Button,
-    time: 60000 // 60 seconds per round choice
+    time: 60000 
   });
 
   collector.on('collect', async i => {
     const clickerId = i.user.id;
 
-    // Reject onlookers
     if (clickerId !== game.selfId && clickerId !== game.oppId) {
       return i.reply({ content: "You aren't a participant in this duel!", ephemeral: true });
     }
 
     const selectedWeapon = i.customId.replace('p_', '');
 
-    // Handle host choice locking
     if (clickerId === game.selfId) {
       if (game.selfChoice !== 'TBD') return i.reply({ content: "Move already declared!", ephemeral: true });
       game.selfChoice = selectedWeapon;
       await i.reply({ content: `You locked in **${selectedWeapon.toUpperCase()}**!`, ephemeral: true });
     } 
-    // Handle opponent choice locking
     else if (clickerId === game.oppId) {
       if (game.oppChoice !== 'TBD') return i.reply({ content: "Move already declared!", ephemeral: true });
       game.oppChoice = selectedWeapon;
       await i.reply({ content: `You locked in **${selectedWeapon.toUpperCase()}**!`, ephemeral: true });
     }
 
-    // Process Bot Action synchronously if needed
     if (game.oppId === 'bot') {
       game.oppChoice = weapons[Math.floor(Math.random() * weapons.length)];
     }
 
-    // Update screen display safely
     await gameMessage.edit({ embeds: [renderStatusEmbed()] }).catch(() => null);
 
-    // If both players selected a move, close round collector and compute results
     if (game.selfChoice !== 'TBD' && game.oppChoice !== 'TBD') {
       collector.stop('round_complete');
     }
   });
 
   collector.on('end', async (_, reason) => {
-    // Handle AFK / Missing input timeout strings
     if (reason !== 'round_complete') {
       ongGames.delete(game.channel);
       return gameMessage.edit({ content: "🛑 Match canceled due to round selection inactivity.", embeds: [], components: [] }).catch(() => null);
     }
 
-    // --- EVALUATE ROUND WINNER ---
     let roundResult = "";
     if (game.selfChoice === game.oppChoice) {
       roundResult = `🤝 **Round ${game.crntRound} is a Draw!** Both threw **${game.selfChoice.toUpperCase()}**.`;
@@ -213,11 +226,9 @@ async function runGameEngine(message, game) {
       roundResult = `💥 **${game.opp} wins Round ${game.crntRound}!** **${game.oppChoice.toUpperCase()}** beats **${game.selfChoice.toUpperCase()}**.`;
     }
 
-    // Clean choices up for potential next loops
     game.selfChoice = 'TBD';
     game.oppChoice = 'TBD';
 
-    // Show round results card for 3.5 seconds before progressing
     const intermediateEmbed = new EmbedBuilder()
       .setColor('#FEE75C')
       .setTitle(`📊 Round ${game.crntRound} Settled!`)
@@ -229,9 +240,7 @@ async function runGameEngine(message, game) {
     setTimeout(async () => {
       game.crntRound++;
 
-      // Check if match threshold reached or rounds concluded
       if (game.crntRound > game.rounds) {
-        // Complete match conclusion
         let finalWinner = "It's an ultimate tie match!";
         if (game.selfW > game.oppW) finalWinner = `👑 **${game.self} is the Ultimate Champion!**`;
         else if (game.oppW > game.selfW) finalWinner = `👑 **${game.opp} is the Ultimate Champion!**`;
@@ -242,16 +251,12 @@ async function runGameEngine(message, game) {
           .setDescription(`🏆 **Final Results:**\n\n🥇 ${finalWinner}\n\n📊 **Final Statistics Matrix:**\n• ${game.self}: ${game.selfW} Wins\n• ${game.opp}: ${game.oppW} Wins`)
           .setTimestamp();
 
-        // CLEANING STATE MAP IMMEDIATELY FOR RAM CONSTRAINTS
         ongGames.delete(game.channel);
         return gameMessage.edit({ embeds: [finalEmbed], components: [] }).catch(() => null);
       } else {
-        // Clear message structure and shift down to the next round execution flow
         await gameMessage.delete().catch(() => null);
-        runGameEngine(message, game);
+        runGameEngine(interaction, game);
       }
     }, 3500);
   });
 }
-
-

@@ -1,5 +1,6 @@
 const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your matrix utility functions
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -24,20 +25,40 @@ module.exports = {
     }
 
     try {
-      const row = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(authorId);
-      const balance = row?.bucks ?? 0;
+      // =======================================================
+      // 2. FETCH DATA FOR BOTH USERS SEAMLESSLY
+      // =======================================================
+      const authorRow = universalGet("amash", authorId);
+      const targetRow = universalGet("amash", target.id);
 
-      if (balance < amt) {
-        return interaction.editReply(`You need **${amt}** Amash, but you only have **${balance}**.`);
+      const authorBalance = authorRow?.bucks ?? 0;
+      const targetBalance = targetRow?.bucks ?? 0;
+
+      // 3. Balance Check
+      if (authorBalance < amt) {
+        return interaction.editReply(`You need **${amt}** Amash, but you only have **${authorBalance}**.`);
       }
 
-      // Perform the transfer
-      db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, authorId);
-      db.prepare(`
-        INSERT INTO amash (userid, bucks) VALUES (?, ?)
-        ON CONFLICT (userid) DO UPDATE SET bucks = bucks + excluded.bucks
-      `).run(target.id, amt);
+      // =======================================================
+      // 4. EXECUTION MATRIX MUTATIONS (SEQUENTIAL & SAFE)
+      // =======================================================
+      
+      // Deduct from sender's balance
+      universalSet("amash", authorId, {
+        bucks: authorBalance - amt
+      });
 
+      // Initialize receiver's profile table row if they are completely new to the bot
+      if (!targetRow) {
+        universalCreate("amash", target.id);
+      }
+
+      // Add to receiver's balance
+      universalSet("amash", target.id, {
+        bucks: targetBalance + amt
+      });
+
+      // 5. Response Embed
       const embed = new EmbedBuilder()
         .setColor('#23A559')
         .setTitle("Transfer Successful!")
@@ -51,4 +72,4 @@ module.exports = {
       return interaction.editReply("Something went wrong with the database.");
     }
   }
-}
+};

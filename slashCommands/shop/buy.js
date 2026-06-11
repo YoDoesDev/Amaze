@@ -1,7 +1,8 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Migrated to your matrix wrappers cleanly
+const { universalGet, universalSet, universalCreate } = require('../../utils/database.js');
 const { items } = require('./shop.js');
-const { clearCooldown } = require("../../utils/cooldowns.js");
+const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -27,29 +28,28 @@ module.exports = {
         const item = items[itemCode];
         const userId = interaction.user.id;
 
-        // Extra defensive validation (redundant due to choices menu, but clean)
         if (!item) {
             return interaction.editReply("Invalid item selection! Use `/shop` to view details.");
         }
 
         try {
-            // 1. Fetch Currency and Target Column Data dynamically
-            const row = db.prepare(`
-                SELECT 
-                    (SELECT bucks FROM amash WHERE userid = ?) as bucks,
-                    (SELECT ${item.id} FROM inventory WHERE userid = ?) as current_item
-            `).get(userId, userId);
+            // =======================================================
+            // 2. FETCH POOLS VIA MATRIX WRAPPERS
+            // =======================================================
+            const amashRow = universalGet("amash", userId);
+            const inventoryRow = universalGet("inventory", userId);
 
-            const balance = row?.bucks ?? 0;
-            const itemStatus = row?.current_item ?? 0;
+            const balance = amashRow?.bucks ?? 0;
+            // Dynamically index the item column value from your inventory object representation
+            const itemStatus = inventoryRow ? (inventoryRow[item.id] ?? 0) : 0;
             const now = Date.now();
 
-            // 2. Balance Check
+            // 3. Balance Check
             if (balance < item.price) {
                 return interaction.editReply(`You need **${item.price} Amash** to buy this, but you only have **${balance}**.`);
             }
 
-            // 3. Ownership / Expiration Constraints
+            // 4. Ownership / Expiration Constraints
             if (itemCode !== "3") { 
                 if (item.isPerm && itemStatus >= 1) {
                     return interaction.editReply(`You already own a **${item.name}**!`);
@@ -59,28 +59,47 @@ module.exports = {
                 }
             }
 
-            // 4. State Modification Logic
+            // =======================================================
+            // 5. STATE MODIFICATION LAYOUT (DYNAMIC ATTRIBUTES)
+            // =======================================================
             let newStatus;
             if (item.id === 'pstone') {
                 newStatus = (itemStatus || 0) + 1;
             } else if (item.isPerm) {
                 newStatus = 1;
             } else {
-                const duration = (item.id === 'pr_tp') ? (24 * 60 * 60 * 1000) : (12 * 60 * 60 * 1000);
+                // Dynamically evaluate duration strings from your item config objects if present, or use standard defaults
+                const duration = item.duration ?? ((item.id === 'pr_tp') ? (24 * 60 * 60 * 1000) : (12 * 60 * 60 * 1000));
                 newStatus = now + duration;
             }
 
-            // 5. Atomic Sequence Execution
-            db.prepare(`INSERT OR IGNORE INTO inventory (userid) VALUES (?)`).run(userId);
-            db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(item.price, userId);
-            db.prepare(`UPDATE inventory SET ${item.id} = ? WHERE userid = ?`).run(newStatus, userId);
+            // Ensure profile lines exist across both tables for fresh user profiles
+            if (!amashRow) {
+                universalCreate("amash", userId);
+            }
+            if (!inventoryRow) {
+                universalCreate("inventory", userId);
+            }
 
-            // 6. Complete Transaction Context Output
+            // =======================================================
+            // 6. EXECUTE ATOMIC TRANSACTION MUTATIONS
+            // =======================================================
+            // Deduct funds from account state balance
+            universalSet("amash", userId, {
+                bucks: balance - item.price
+            });
+
+            // Persist the updated item data to inventory state dynamically
+            universalSet("inventory", userId, {
+                [item.id]: newStatus
+            });
+
+            // 7. Complete Transaction Context Output
             let successDetail = item.id === 'pstone' 
                 ? `You now own **${newStatus}** Philosopher's Stones! 💎` 
                 : `Successfully bought **${item.name}**.`;
 
-            return interaction.editReply(`💸 **Purchase Successful!** ${successDetail}\nRemaining balance: **${balance - item.price} Amash**.`);
+            return interaction.editReply(`💸 **Purchase Successful!** ${successDetail}\nRemaining balance: **${(balance - item.price).toLocaleString()}** Amash.`);
 
         } catch (err) {
             console.error("Buy Command Error:", err);

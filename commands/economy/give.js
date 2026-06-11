@@ -1,5 +1,10 @@
 const { EmbedBuilder } = require('discord.js');
-const { db } = require('../../utils/database.js');
+// 1. FIXED: Imported your matrix utility functions
+const { 
+  universalGet, 
+  universalSet, 
+  universalCreate 
+} = require('../../utils/database.js');
 
 module.exports = {
   name: 'give',
@@ -27,7 +32,7 @@ module.exports = {
 
     try {
       // 2. Check Author Balance
-      const row = db.prepare(`SELECT bucks FROM amash WHERE userid = ?`).get(authorId);
+      const row = universalGet("amash", authorId);
       const balance = row?.bucks ?? 0;
 
       if (balance < amt) {
@@ -35,14 +40,23 @@ module.exports = {
       }
 
       // 3. Execution (The Transfer)
-      // Subtract from Author
-      db.prepare(`UPDATE amash SET bucks = bucks - ? WHERE userid = ?`).run(amt, authorId);
+      // FIXED: Used the safe 'balance' variable instead of reading row.bucks directly
+      universalSet("amash", authorId, {
+        bucks: balance - amt
+      });
 
-      // Add to Target (Using your ON CONFLICT logic)
-      db.prepare(`
-        INSERT INTO amash (userid, bucks) VALUES (?, ?)
-        ON CONFLICT (userid) DO UPDATE SET bucks = bucks + excluded.bucks
-      `).run(target.id, amt);
+      // Add to Target (Using your functional state logic)
+      const targetRow = universalGet("amash", target.id);
+      
+      if (!targetRow) {
+        universalCreate("amash", target.id);
+      }
+      
+      const targetBucks = targetRow?.bucks ?? 0;
+      
+      universalSet("amash", target.id, {
+        bucks: targetBucks + amt
+      });
 
       // 4. Success Response
       const embed = new EmbedBuilder()
@@ -58,4 +72,4 @@ module.exports = {
       return message.reply("A database error occurred during the transfer.");
     }
   }
-}
+};
