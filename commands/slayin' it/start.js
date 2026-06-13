@@ -44,6 +44,7 @@ module.exports = {
       name: "Choose your fighting style:", 
       value: "🗡 Attacker: You start off with more melee damage, you cause more damage than other fighting styles\n\n🛡 Defender: You start off with more speed, dodging opponent's attacks if you're faster than them, you can dodge more effectively than other fighting styles\n\n🧱 Endurer: You start off with more damage absorption abilites, to withstand your opponent's attacks more effective than other fighting styles" 
     })
+    .setColor("#E74C3C")
     .setTimestamp();
     
     const styleMsg = await message.channel.send({
@@ -146,6 +147,7 @@ module.exports = {
     .setFooter({
       text: `You are ${style} now!`
     })
+    .setColor("#2ECC71")
     .setTimestamp();
     
     return styleMsg.edit({embeds: [info], content: null});
