@@ -65,7 +65,7 @@ const initDb = () => {
         dma INTEGER DEFAULT 5,
         xp INTEGER DEFAULT 0,
         lvl INTEGER DEFAULT 0
-    )`);
+    )`).run();
     
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
@@ -79,7 +79,7 @@ const TABLE_SCHEMAS = {
     vouch_history: { keys: ['voucher_id', 'receiver_id'], cache: vouch_history}, 
     investments: { keys: ['investor', 'invested'], defaults: { stocks: 0, baseprice: 70, profit: 0, lastpurchase: 0 }, cache: investments, cacheCollection: portfolio}, 
     characters : {
-        keys: ['investor', 'invested'], 
+        keys: ['userid'], 
         defaults: {
             type: 0,
             spd: 10,
