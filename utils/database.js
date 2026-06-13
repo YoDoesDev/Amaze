@@ -7,7 +7,8 @@ const {
     vouch_history, 
     inventory, 
     investments, 
-    portfolio
+    portfolio, 
+    characters
 } = require("./cache.js");
 
 const db = new Database(path.join(__dirname, '..', 'amaze.sqlite'), {});
@@ -55,6 +56,16 @@ const initDb = () => {
         guildid TEXT PRIMARY KEY,
         prefix TEXT DEFAULT '!'
     )`).run();
+    db.prepare(`CREATE TABLE IF NOT EXISTS
+    characters (
+        userid TEXT PRIMARY KEY, 
+        type INTEGER DEFAULT 0,
+        spd INTEGER DEFAULT 10,
+        str INTEGER DEFAULT 20,
+        dma INTEGER DEFAULT 5,
+        xp INTEGER DEFAULT 0,
+        lvl INTEGER DEFAULT 0
+    )`);
     
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
@@ -66,7 +77,19 @@ const TABLE_SCHEMAS = {
     inventory: { keys: ['userid'], defaults: { pr_tp: 0, ddbl_tp: 0, dblv_tp: 0, stocklic: 0, pstone: 0 }, cache: inventory},
     guild_settings: { keys: ['guildid'], defaults: { prefix: '!' } },
     vouch_history: { keys: ['voucher_id', 'receiver_id'], cache: vouch_history}, 
-    investments: { keys: ['investor', 'invested'], defaults: { stocks: 0, baseprice: 70, profit: 0, lastpurchase: 0 }, cache: investments, cacheCollection: portfolio}
+    investments: { keys: ['investor', 'invested'], defaults: { stocks: 0, baseprice: 70, profit: 0, lastpurchase: 0 }, cache: investments, cacheCollection: portfolio}, 
+    characters : {
+        keys: ['investor', 'invested'], 
+        defaults: {
+            type: 0,
+            spd: 10,
+            str: 20,
+            dma: 5,
+            xp: 0,
+            lvl: 0
+        }, 
+        cache: characters
+    }
 };
 
 function universalGet(tableName, primaryId, secondaryId = null) {
