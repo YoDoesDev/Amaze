@@ -103,7 +103,11 @@ module.exports = {
     
     collector.on("end", async (_, reason) => {
       if(reason != "type_selected"){
-        return styleMsg.edit("You took too long, baii 👋");
+        return styleMsg.edit({
+          content: "You took too long, baii 👋", 
+          embeds: null, 
+          components: null
+        });
       }
       
       fstr = fstr || 20;
