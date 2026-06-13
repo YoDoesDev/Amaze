@@ -19,6 +19,9 @@ module.exports = {
   description: 'Start your journey in the game by getting a character with a fighting style and specific stats.', 
   async execute(message) {
     const authorId = message.author.id;
+    if(universalGet("characters", authorId)){
+      return message.reply("You already have a character!");
+    }
     const btnRow = new ActionRowBuilder().addComponents(
       
       new ButtonBuilder()
