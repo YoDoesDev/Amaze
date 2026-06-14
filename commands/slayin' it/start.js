@@ -105,8 +105,8 @@ module.exports = {
       if(reason != "type_selected"){
         return styleMsg.edit({
           content: "You took too long, baii 👋", 
-          embeds: null, 
-          components: null
+          embeds: [], 
+          components: []
         });
       }
       
