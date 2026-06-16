@@ -14,7 +14,7 @@ const {
 } = require("discord.js");
 
 module.exports = {
-  data: new SlashCommaneBuilder()
+  data: new SlashCommandBuilder()
   .setName("start")
   .setDescription("Start your journey in the game by getting a character with a fighting style and specific stats."), 
   category: "Slayin' It (Under Construction ⚠️)", 
