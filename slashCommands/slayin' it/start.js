@@ -43,7 +43,7 @@ module.exports = {
     );
     
     const embed = new EmbedBuilder()
-    .setTitle(`Buckle up, ${message.member.displayName}!`)
+    .setTitle(`Buckle up, ${interaction.member.displayName}!`)
     .setDescription("Your journey in the game Slayin' It starts here!\n")
     .addFields({
       name: "Choose your fighting style:", 
