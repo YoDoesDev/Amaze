@@ -105,7 +105,7 @@ module.exports = {
     
     collector.on("end", async (_, reason) => {
       if(reason != "type_selected"){
-        return styleMsg.editReply({
+        return interaction.editReply({
           content: "You took too long, baii 👋", 
           embeds: [], 
           components: []
@@ -159,7 +159,7 @@ module.exports = {
     .setColor("#2ECC71")
     .setTimestamp();
     
-    return styleMsg.editReply({embeds: [info], content: null});
+    return interaction.editReply({embeds: [info], content: null});
     });
   }
 }
