@@ -6,10 +6,10 @@ const data = new SlashCommandBuilder()
     .setName('slay')
     .setDescription('Main entry point for the RPG game')
     .addSubcommand(sub => 
-        sub.setName('charinfo').setDescription('View your character information')
+        sub.setName('charinfo').setDescription('View your character information.')
     )
     .addSubcommand(sub => 
-        sub.setName('hunt').setDescription('Go hunting for loot')
+        sub.setName('start').setDescription('Start your journey in the game.')
     );
 
 module.exports = {
