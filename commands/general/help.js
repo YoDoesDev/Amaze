@@ -15,31 +15,30 @@ module.exports = {
         if (!args.length) {
             const categories = {};
 
-            // Map out your standard 26 commands
+            // Map out your standard 26 commands using their .category
             commands.forEach(cmd => {
                 const cat = cmd.category || 'General'; 
 
-                // Skip the main 'slay' router so it doesn't just show up as "!slay"
+                // Skip the main 'slay' router command so it doesn't double up
                 if (cmd.name === 'slay') return;
 
                 if (!categories[cat]) categories[cat] = [];
                 categories[cat].push(`\`${cmd.name}\``);
             });
 
-            // DYNAMICALLY INJECT SUB-COMMANDS INTO THE 'slay' CATEGORY DISPLAY
+            // DYNAMICALLY INJECT SUB-COMMANDS INTO THE EXPLICIT CATEGORY
             try {
-                // Starts at your project root and targets the prefix subs directory
                 const subsPath = path.join(process.cwd(), 'commands', 'slay', 'subs');
+                const targetCategory = 'Slay (WIP ⚠️)';
                 
                 if (fs.existsSync(subsPath)) {
                     const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
                     
-                    if (!categories['slay']) categories['slay'] = [];
+                    if (!categories[targetCategory]) categories[targetCategory] = [];
                     
-                    // Add each sub-command formatted as "slay <name>"
                     subFiles.forEach(file => {
                         const subName = file.replace('.js', '');
-                        categories['slay'].push(`\`slay ${subName}\``);
+                        categories[targetCategory].push(`\`slay ${subName}\``);
                     });
                 }
             } catch (err) {
@@ -63,13 +62,10 @@ module.exports = {
             return message.reply({ embeds: [embed] });
         }
 
-        // --- 2. DISPLAY SPECIFIC COMMAND DETAILS (!help hunt or !help slay hunt) ---
+        // --- 2. DISPLAY SPECIFIC COMMAND DETAILS ---
         const searchName = args[0].toLowerCase();
-        
-        // 1. Check if they are looking up a regular command (e.g., !help ping)
         let command = commands.get(searchName) || commands.find(c => c.aliases && c.aliases.includes(searchName));
 
-        // 2. If they searched for an RPG command or typed 'slay' first, check the subs folder
         if (!command || searchName === 'slay') {
             const subTarget = searchName === 'slay' && args[1] ? args[1].toLowerCase() : searchName;
             
@@ -84,7 +80,7 @@ module.exports = {
                         .setColor(0xFFFF00)
                         .addFields(
                             { name: 'Description', value: subCommand.description || 'No description provided.' },
-                            { name: 'Category', value: '`slay`', inline: true }
+                            { name: 'Category', value: '`Slay (WIP ⚠️)`', inline: true }
                         );
 
                     if (subCommand.syntax) {
@@ -98,7 +94,6 @@ module.exports = {
             }
         }
 
-        // Fallback: If it's not a regular command and not an RPG command
         if (!command) {
             return message.reply("I couldn't find that command. Check your spelling!");
         }
