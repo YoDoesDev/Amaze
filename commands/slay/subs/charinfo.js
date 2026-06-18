@@ -26,7 +26,8 @@ module.exports = {
     const stat = new EmbedBuilder()
     .setTitle(`${message.member.displayName}'s Stats:`)
     .setDescription(`⚔️ Type: ${type}\n\n🏃‍♂️ SPD: ${spd}\n🗡 STR: ${str}\n🧱 DMA: ${dma}\n🟩 HP: ${hp}\n\n↗️ LVL: ${lvl}\n🧘‍♂️ XP: ${xp}`)
-    .setTimestamp();
+    .setTimestamp()
+    .setColor("#D4AF37");
     
     return message.channel.send({embeds: [stat]});
   }
