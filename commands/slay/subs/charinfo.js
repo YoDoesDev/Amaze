@@ -27,6 +27,6 @@ module.exports = {
     .setDescription(`⚔️ Type: ${type}\n\n 🏃‍♂️ SPD: ${spd}\n 🗡 STR: ${str}\n🧱 DMA: ${dma}\n🟩 HP: ${hp}\n\n↗️ LVL: ${lvl}\n🧘‍♂️ XP: ${xp}`)
     .setTimestamp();
     
-    return message.channel.send({embeds: [embed]});
+    return message.channel.send({embeds: [stat]});
   }
 }
