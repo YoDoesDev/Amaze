@@ -16,36 +16,36 @@ module.exports = {
     async execute(interaction) {
         if (!interaction.deferred) await interaction.deferReply();
 
-        const { commands } = interaction.client;
+        const { slashCommands } = interaction.client;
         const commandOption = interaction.options.getString('command')?.toLowerCase();
 
         // --- 1. DISPLAY ALL CATEGORIES (/help) ---
         if (!commandOption) {
             const categories = {};
 
-            commands.forEach(cmd => {
+            slashCommands.forEach(cmd => {
                 const cat = cmd.category || 'General';
 
-                // Skip the main 'slay' router command to avoid duplicates
+                // Skip the main router command since we are listing sub-commands instead
                 if (cmd.data?.name === 'slay') return;
 
                 if (!categories[cat]) categories[cat] = [];
                 categories[cat].push(`\`/${cmd.data?.name || cmd.name}\``);
             });
 
-            // DYNAMICALLY INJECT SUB-COMMANDS INTO THE 'slay' CATEGORY
+            // DYNAMIC INJECTION FOR THE 'Slay (WIP ⚠️)' CATEGORY
             try {
-                // Starts at your project root and targets the slash subs directory
                 const subsPath = path.join(process.cwd(), 'slashCommands', 'slay', 'subs');
+                const targetCategory = 'Slay (WIP ⚠️)';
 
                 if (fs.existsSync(subsPath)) {
                     const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
                     
-                    if (!categories['slay']) categories['slay'] = [];
+                    if (!categories[targetCategory]) categories[targetCategory] = [];
 
                     subFiles.forEach(file => {
                         const subName = file.replace('.js', '');
-                        categories['slay'].push(`\`/slay ${subName}\``);
+                        categories[targetCategory].push(`\`/slay ${subName}\``);
                     });
                 }
             } catch (err) {
@@ -70,11 +70,10 @@ module.exports = {
         }
 
         // --- 2. DISPLAY SPECIFIC COMMAND DETAILS (/help command: hunt) ---
-        let command = commands.get(commandOption);
+        let command = slashCommands.get(commandOption);
 
         if (!command || commandOption === 'slay') {
             try {
-                // Starts at your project root and looks for the sub-command file inside your slash subs directory
                 const subFilePath = path.join(process.cwd(), 'slashCommands', 'slay', 'subs', `${commandOption}.js`);
 
                 if (fs.existsSync(subFilePath)) {
@@ -85,7 +84,7 @@ module.exports = {
                         .setColor(0xFFFF00)
                         .addFields(
                             { name: 'Description', value: subCommand.description || 'No description provided.' },
-                            { name: 'Category', value: '`slay`', inline: true }
+                            { name: 'Category', value: '`Slay (WIP ⚠️)`', inline: true }
                         );
 
                     return await interaction.editReply({ embeds: [detailEmbed] });
