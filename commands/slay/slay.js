@@ -39,6 +39,7 @@ module.exports = {
             const subcommand = require(path.join(__dirname, 'subs', `${subcommandName}.js`));
             await subcommand.execute(message, args.slice(1));
         } catch (err) {
+            console.error(err);
             message.reply("That RPG action doesn't exist. Type `!slay` to see available actions.");
         }
     }
