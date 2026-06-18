@@ -4,7 +4,7 @@ const path = require('path');
 module.exports = {
     // --- PREFIX COMMAND LOADER ---
     loadCommands: (client) => {
-        const foldersPath = path.join(__dirname, '../../commands');
+        const foldersPath = path.join(process.cwd(), 'commands');
         if (!fs.existsSync(foldersPath)) return console.log(">>> [ERR] Prefix folder not found.");
 
         const commandFolders = fs.readdirSync(foldersPath);
@@ -24,6 +24,7 @@ module.exports = {
                 if (command.name && command.execute) {
                     client.commands.set(command.name, {
                         ...command,
+                        // Keeps your custom category like 'Slay (WIP ⚠️)' if explicitly set in the file
                         category: command.category || (isDir ? folder : "General")
                     });
 
@@ -40,7 +41,7 @@ module.exports = {
 
     // --- SLASH COMMAND LOADER ---
     loadSlashCommands: (client) => {
-        const slashPath = path.join(__dirname, '../../slashCommands');
+        const slashPath = path.join(process.cwd(), 'slashCommands');
         if (!fs.existsSync(slashPath)) return console.log(">>> [ERR] Slash folder not found.");
 
         const slashFolders = fs.readdirSync(slashPath);
@@ -60,6 +61,7 @@ module.exports = {
                 if (command.data && command.execute) {
                     client.slashCommands.set(command.data.name, {
                         ...command,
+                        // Keeps your custom category like 'Slay (WIP ⚠️)' if explicitly set in the file
                         category: command.category || (isDir ? folder : "General")
                     });
                 }
