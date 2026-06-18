@@ -8,6 +8,8 @@ module.exports = {
         if (!fs.existsSync(foldersPath)) return console.log(">>> [ERR] Prefix folder not found.");
 
         const commandFolders = fs.readdirSync(foldersPath);
+        let subCommandCount = 0;
+        let routerCount = 0;
 
         for (const folder of commandFolders) {
             const folderPath = path.join(foldersPath, folder);
@@ -24,7 +26,6 @@ module.exports = {
                 if (command.name && command.execute) {
                     client.commands.set(command.name, {
                         ...command,
-                        // Keeps your custom category like 'Slay (WIP ⚠️)' if explicitly set in the file
                         category: command.category || (isDir ? folder : "General")
                     });
 
@@ -33,10 +34,27 @@ module.exports = {
                             client.aliases.set(alias, command.name);
                         }
                     }
+
+                    // If this is our main router, flag it to subtract later
+                    if (command.name === 'slay') {
+                        routerCount++;
+                    }
+                }
+            }
+
+            // Look inside the nested subs folder to count its files
+            if (isDir) {
+                const subsPath = path.join(folderPath, 'subs');
+                if (fs.existsSync(subsPath) && fs.lstatSync(subsPath).isDirectory()) {
+                    const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+                    subCommandCount += subFiles.length;
                 }
             }
         }
-        console.log(`>>> [SYSTEM] Loaded ${client.commands.size} Prefix Commands.`);
+
+        // Math: Total registered commands minus the 1 router file plus the sub-commands
+        const totalDisplayCount = client.commands.size - routerCount + subCommandCount;
+        console.log(`>>> [SYSTEM] Loaded ${totalDisplayCount} Prefix Commands.`);
     },
 
     // --- SLASH COMMAND LOADER ---
@@ -45,6 +63,8 @@ module.exports = {
         if (!fs.existsSync(slashPath)) return console.log(">>> [ERR] Slash folder not found.");
 
         const slashFolders = fs.readdirSync(slashPath);
+        let subCommandCount = 0;
+        let routerCount = 0;
 
         for (const folder of slashFolders) {
             const folderPath = path.join(slashPath, folder);
@@ -61,12 +81,25 @@ module.exports = {
                 if (command.data && command.execute) {
                     client.slashCommands.set(command.data.name, {
                         ...command,
-                        // Keeps your custom category like 'Slay (WIP ⚠️)' if explicitly set in the file
                         category: command.category || (isDir ? folder : "General")
                     });
+
+                    if (command.data.name === 'slay') {
+                        routerCount++;
+                    }
+                }
+            }
+
+            if (isDir) {
+                const subsPath = path.join(folderPath, 'subs');
+                if (fs.existsSync(subsPath) && fs.lstatSync(subsPath).isDirectory()) {
+                    const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+                    subCommandCount += subFiles.length;
                 }
             }
         }
-        console.log(`>>> [SYSTEM] Loaded ${client.slashCommands.size} Slash Commands.`);
+
+        const totalDisplayCount = client.slashCommands.size - routerCount + subCommandCount;
+        console.log(`>>> [SYSTEM] Loaded ${totalDisplayCount} Slash Commands.`);
     }
 };
