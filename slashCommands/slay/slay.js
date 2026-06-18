@@ -2,20 +2,44 @@ const { SlashCommandBuilder } = require('discord.js');
 const path = require('path');
 const fs = require('fs');
 
-const data = new SlashCommandBuilder()
+const cmdData = new SlashCommandBuilder()
     .setName('slay')
-    .setDescription('Main entry point for the RPG game')
-    .addSubcommand(sub => 
-        sub.setName('charinfo').setDescription('View your character information.')
-    )
-    .addSubcommand(sub => 
-        sub.setName('start').setDescription('Start your journey in the game.')
-    );
+    .setDescription('Main entry point for the RPG game');
+
+const subsPath = path.join(__dirname, "subs");
+
+if (fs.existsSync(subsPath)) {
+    const subcommandFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+
+    for (const file of subcommandFiles) {
+        const subcommandPath = path.join(subsPath, file);
+        const subcommand = require(subcommandPath);
+        
+        // If your subfile exports its builder under 'data'
+        if (subcommand.data) {
+            // Convert your SlashCommandBuilder to a raw JSON object
+            const rawData = subcommand.data.toJSON();
+            
+            cmdData.addSubcommand(sub => {
+                sub
+                    .setName(rawData.name)
+                    .setDescription(rawData.description);
+                
+                // If your subfile has options (like strings, integers, etc.), carry them over
+                if (rawData.options) {
+                    sub.options = rawData.options;
+                }
+                
+                return sub;
+            });
+        }
+    }
+}
 
 module.exports = {
-    data: data,
+    category: "Slay (WIP ⚠️)",
+    data: cmdData,
     async execute(interaction) {
-        // Safe check: if for some reason it wasn't deferred, defer it now
         if (!interaction.deferred) await interaction.deferReply();
 
         const subcommandName = interaction.options.getSubcommand();
@@ -30,7 +54,6 @@ module.exports = {
             }
 
             const subcommand = require(subcommandPath);
-            // Pass the interaction along to the sub-command file
             await subcommand.execute(interaction);
         } catch (err) {
             console.error("Slash RPG Error:", err);
