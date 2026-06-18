@@ -28,13 +28,12 @@ module.exports = {
 
             // DYNAMICALLY INJECT SUB-COMMANDS INTO THE 'slay' CATEGORY DISPLAY
             try {
-                // Adjust this path if your folder name inside /commands is different
-                const subsPath = path.join(__dirname, '../commands/slay/subs');
+                // Starts at your project root and targets the prefix subs directory
+                const subsPath = path.join(process.cwd(), 'commands', 'slay', 'subs');
                 
                 if (fs.existsSync(subsPath)) {
                     const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
                     
-                    // Create the category if it doesn't exist
                     if (!categories['slay']) categories['slay'] = [];
                     
                     // Add each sub-command formatted as "slay <name>"
@@ -70,13 +69,12 @@ module.exports = {
         // 1. Check if they are looking up a regular command (e.g., !help ping)
         let command = commands.get(searchName) || commands.find(c => c.aliases && c.aliases.includes(searchName));
 
-        // 2. If they searched for an RPG command, check the subs folder
+        // 2. If they searched for an RPG command or typed 'slay' first, check the subs folder
         if (!command || searchName === 'slay') {
-            // If they typed "!help slay charinfo", args[1] is our sub-command. Otherwise use args[0]
             const subTarget = searchName === 'slay' && args[1] ? args[1].toLowerCase() : searchName;
             
             try {
-                const subFilePath = path.join(__dirname, '../commands/slay/subs', `${subTarget}.js`);
+                const subFilePath = path.join(process.cwd(), 'commands', 'slay', 'subs', `${subTarget}.js`);
                 
                 if (fs.existsSync(subFilePath)) {
                     const subCommand = require(subFilePath);

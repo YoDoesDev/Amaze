@@ -35,7 +35,8 @@ module.exports = {
 
             // DYNAMICALLY INJECT SUB-COMMANDS INTO THE 'slay' CATEGORY
             try {
-                const subsPath = path.join(__dirname, '../../slashCommands/slay/subs');
+                // Starts at your project root and targets the slash subs directory
+                const subsPath = path.join(process.cwd(), 'slashCommands', 'slay', 'subs');
 
                 if (fs.existsSync(subsPath)) {
                     const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
@@ -73,7 +74,8 @@ module.exports = {
 
         if (!command || commandOption === 'slay') {
             try {
-                const subFilePath = path.join(__dirname, '../../slashCommands/slay/subs', `${commandOption}.js`);
+                // Starts at your project root and looks for the sub-command file inside your slash subs directory
+                const subFilePath = path.join(process.cwd(), 'slashCommands', 'slay', 'subs', `${commandOption}.js`);
 
                 if (fs.existsSync(subFilePath)) {
                     const subCommand = require(subFilePath);
