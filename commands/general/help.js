@@ -11,38 +11,40 @@ module.exports = {
     execute(message, args) {
         const { commands } = message.client;
 
-        // --- 1. DISPLAY ALL CATEGORIES ---
+        // --- 1. DISPLAY ALL CATEGORIES (!help) ---
         if (!args.length) {
             const categories = {};
 
+            // Map out your standard 26 commands
             commands.forEach(cmd => {
                 const cat = cmd.category || 'General'; 
 
-                // Skip the main router command so it doesn't duplicate
+                // Skip the main 'slay' router so it doesn't just show up as "!slay"
                 if (cmd.name === 'slay') return;
 
                 if (!categories[cat]) categories[cat] = [];
                 categories[cat].push(`\`${cmd.name}\``);
             });
 
-            // DYNAMICALLY ADD SUB-COMMANDS TO THE 'slay' CATEGORY
+            // DYNAMICALLY INJECT SUB-COMMANDS INTO THE 'slay' CATEGORY DISPLAY
             try {
-                // Adjust this path if your folder name is exactly 'slay'
+                // Adjust this path if your folder name inside /commands is different
                 const subsPath = path.join(__dirname, '../commands/slay/subs');
                 
                 if (fs.existsSync(subsPath)) {
                     const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
                     
+                    // Create the category if it doesn't exist
                     if (!categories['slay']) categories['slay'] = [];
                     
+                    // Add each sub-command formatted as "slay <name>"
                     subFiles.forEach(file => {
                         const subName = file.replace('.js', '');
-                        // Formats it nicely as "slay profile" or just "profile" depending on your preference
                         categories['slay'].push(`\`slay ${subName}\``);
                     });
                 }
             } catch (err) {
-                console.error("Error reading slay subcommands for main help menu:", err);
+                console.error("Error adding slay subcommands to help menu:", err);
             }
 
             const embed = new EmbedBuilder()
@@ -62,15 +64,15 @@ module.exports = {
             return message.reply({ embeds: [embed] });
         }
 
-        // --- 2. DISPLAY SPECIFIC SUB-COMMAND DETAILS ---
+        // --- 2. DISPLAY SPECIFIC COMMAND DETAILS (!help hunt or !help slay hunt) ---
         const searchName = args[0].toLowerCase();
         
-        // Check if they are looking up a regular command first
+        // 1. Check if they are looking up a regular command (e.g., !help ping)
         let command = commands.get(searchName) || commands.find(c => c.aliases && c.aliases.includes(searchName));
 
-        // If they typed "!help profile" or "!help slay profile", check the subs directory
+        // 2. If they searched for an RPG command, check the subs folder
         if (!command || searchName === 'slay') {
-            // Determine the target sub-command name
+            // If they typed "!help slay charinfo", args[1] is our sub-command. Otherwise use args[0]
             const subTarget = searchName === 'slay' && args[1] ? args[1].toLowerCase() : searchName;
             
             try {
@@ -98,7 +100,7 @@ module.exports = {
             }
         }
 
-        // Fallback to standard command lookup if no sub-command matched
+        // Fallback: If it's not a regular command and not an RPG command
         if (!command) {
             return message.reply("I couldn't find that command. Check your spelling!");
         }
@@ -115,6 +117,6 @@ module.exports = {
             detailEmbed.addFields({ name: 'Syntax', value: `\`${command.syntax}\`` });
         }
 
-        return message.reply({ embeds: [detailEmbed]});
+        return message.reply({ embeds: [detailEmbed] });
     },
 };
