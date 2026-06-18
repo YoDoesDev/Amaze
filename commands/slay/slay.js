@@ -34,13 +34,39 @@ module.exports = {
             }
         }
 
-        // --- IF ARGUMENTS ARE PROVIDED (!slay hunt) ---
-        try {
-            const subcommand = require(path.join(__dirname, 'subs', `${subcommandName}.js`));
-            await subcommand.execute(message, args.slice(1));
-        } catch (err) {
-            console.error(err);
-            message.reply("That RPG action doesn't exist. Type `!slay` to see available actions.");
+            // If sub-command argument provided (!slay charinfo or !slay ci)
+            try {
+                const subsPath = path.join(__dirname, 'subs');
+                const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+                
+                let targetFile = null;
+            
+                // Loop through the subfiles to check for a name or alias match
+                for (const file of subFiles) {
+                    const sub = require(path.join(subsPath, file));
+                    
+                    const nameMatch = sub.name && sub.name.toLowerCase() === subcommandName;
+                    const aliasMatch = sub.aliases && Array.isArray(sub.aliases) && sub.aliases.map(a => a.toLowerCase()).includes(subcommandName);
+            
+                    if (nameMatch || aliasMatch) {
+                        targetFile = file;
+                        break;
+                    }
+                }
+            
+                if (!targetFile) {
+                    return message.reply("That RPG action doesn't exist. Type `!slay` to see available actions.");
+                }
+            
+                const subcommand = require(path.join(subsPath, targetFile));
+                await subcommand.execute(message, args.slice(1));
+            
+            } catch (err) {
+                console.error("Prefix Subcommand Router Error:", err);
+                message.reply("There was an error trying to execute that action.");
+            }
+
         }
     }
-};
+
+
