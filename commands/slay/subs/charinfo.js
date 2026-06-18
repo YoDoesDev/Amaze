@@ -5,6 +5,7 @@ module.exports = {
   name: "charinfo", 
   aliases: ["ci", "info"], 
   category: "Slay (In progress!)", 
+  description: "Get stats about your character!", 
   cooldown: 20,
   async execute(message){
     const authorId = message.author.id;
