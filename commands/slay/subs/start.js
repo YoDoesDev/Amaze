@@ -2,7 +2,7 @@ const {
   universalSet, 
   universalCreate, 
   universalGet
-} = require("../../utils/database.js");
+} = require("../../../utils/database.js");
 
 const {
   EmbedBuilder, 

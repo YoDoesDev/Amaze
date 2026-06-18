@@ -1,4 +1,4 @@
-const { universalGet } = require("../../utils/database.js");
+const { universalGet } = require("../../../utils/database.js");
 const { EmbedBuilder } = require("discord.js");
 
 module.exports = {
