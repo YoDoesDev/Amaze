@@ -14,7 +14,7 @@ const {
 
 module.exports = {
   name: "start", 
-  category: "Slayin' It (Under Construction ⚠️)", 
+  category: "Slay (In progress!)", 
   cooldown: 10,
   description: 'Start your journey in the game by getting a character with a fighting style and specific stats.', 
   async execute(message) {
