@@ -12,7 +12,7 @@ module.exports = {
                 .setDescription('The command you want specific details about')
                 .setRequired(false)
         ),
-        
+    category: "General", 
     async execute(interaction) {
         if (!interaction.deferred) await interaction.deferReply();
 

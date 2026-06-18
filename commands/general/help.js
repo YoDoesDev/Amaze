@@ -6,6 +6,7 @@ module.exports = {
     name: 'help',
     aliases: ['h'],
     cooldown: 3,
+    category: "General", 
     description: 'Displays all commands categorized or details of a specific command.',
     
     execute(message, args) {
