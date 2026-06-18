@@ -30,7 +30,7 @@ module.exports = {
                 if (cmd.data?.name === 'slay') return;
 
                 if (!categories[cat]) categories[cat] = [];
-                categories[cat].push(`\`/${cmd.data?.name || cmd.name}\``);
+                categories[cat].push(`\`${cmd.data?.name || cmd.name}\``);
             });
 
             // DYNAMIC INJECTION FOR THE 'Slay (WIP ⚠️)' CATEGORY
@@ -45,7 +45,7 @@ module.exports = {
 
                     subFiles.forEach(file => {
                         const subName = file.replace('.js', '');
-                        categories[targetCategory].push(`\`/slay ${subName}\``);
+                        categories[targetCategory].push(`\`slay ${subName}\``);
                     });
                 }
             } catch (err) {
