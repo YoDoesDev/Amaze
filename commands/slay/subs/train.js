@@ -26,6 +26,10 @@ module.exports = {
     if(!stats)
       return message.reply("You don't own a character in the game yet! Use `!start` command to begin!");
       
+      
+    let ostr = stats.str;
+    let ospd = stats.spd;
+    let odma = stats.dma;
     
     let nstr = Math.random();
     let nspd = Math.random();
@@ -35,23 +39,23 @@ module.exports = {
     if(type == 1){
       nstr += 4;
       universalSet("characters", authorId, {
-        str: nstr,
-        spd: nspd, 
-        dma: ndma
+        str: ostr + nstr,
+        spd: ospd + nspd, 
+        dma: odma + ndma
       });
     } else if(type == 2){
       nspd += 4;
       universalSet("characters", authorId, {
-        str: nstr,
-        spd: nspd, 
-        dma: ndma
+        str: ostr + nstr,
+        spd: ospd + nspd, 
+        dma: odma + ndma
       });
     } else{
       ndma += 4;
       universalSet("characters", authorId, {
-        str: nstr,
-        spd: nspd, 
-        dma: ndma
+        str: ostr + nstr,
+        spd: ospd + nspd, 
+        dma: odma + ndma
       })
     }
     
@@ -59,7 +63,7 @@ module.exports = {
     
     const embed = new EmbedBuilder()
     .setTitle("Training Complete!")
-    .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${newStats.str} (+${nstr})\nSPD: ${newStats.spd} (+${nspd})\nDMA: ${newStats.dma} (+${ndma})`)
+    .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${Math.round(newStats.str)} (+${Math.round(nstr)})\nSPD: ${Math.round(newStats.spd)}(+${Math.round(nspd)})\nDMA: ${Math.round(newStats.dma)} (+${Math.round(ndma)})`)
     .setTimestamp();
     
     return message.reply({embeds: [embed]})
