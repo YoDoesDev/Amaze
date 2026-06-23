@@ -30,6 +30,7 @@ module.exports = {
     const nstr = Math.random();
     const nspd = Math.random();
     const ndma = Math.random();
+    const type = stats.type;
     
     if(type == 1){
       nstr += 4;
