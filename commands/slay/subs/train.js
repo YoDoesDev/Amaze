@@ -26,7 +26,11 @@ module.exports = {
     if(!stats)
       return message.reply("You don't own a character in the game yet! Use `!start` command to begin!");
       
-      
+    const monie = cash.bucks;
+    universalSet("amash", authorId, {
+      bucks: monie - 10
+    })
+    
     let ostr = stats.str;
     let ospd = stats.spd;
     let odma = stats.dma;
