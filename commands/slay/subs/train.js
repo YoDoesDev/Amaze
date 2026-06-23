@@ -27,9 +27,9 @@ module.exports = {
       return message.reply("You don't own a character in the game yet! Use `!start` command to begin!");
       
     
-    const nstr = Math.random();
-    const nspd = Math.random();
-    const ndma = Math.random();
+    let nstr = Math.random();
+    let nspd = Math.random();
+    let ndma = Math.random();
     const type = stats.type;
     
     if(type == 1){
