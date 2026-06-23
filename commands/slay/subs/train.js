@@ -31,9 +31,9 @@ module.exports = {
     let ospd = stats.spd;
     let odma = stats.dma;
     
-    let nstr = Math.random();
-    let nspd = Math.random();
-    let ndma = Math.random();
+    let nstr = Math.random() * 4;
+    let nspd = Math.random() * 4;
+    let ndma = Math.random() * 4;
     const type = stats.type;
     
     if(type == 1){
