@@ -39,18 +39,18 @@ module.exports = {
     let odma = stats.dma;
     let oxp = stats.xp;
     
-    let nstr = Math.round(Math.random() * 4);
-    let nspd = Math.round(Math.random() * 4);
-    let ndma = Math.round(Math.random() * 4);
+    let nstr = Math.round(Math.random() * 4) + 2;
+    let nspd = Math.round(Math.random() * 4) + 2;
+    let ndma = Math.round(Math.random() * 4) + 2;
     let nxp = Math.ceil(Math.random() * 16) + 10;
     const type = stats.type;
     
     if(type == 1){
-      nstr += 4;
+      nstr += 2;
     } else if(type == 2){
-      nspd += 4;
+      nspd += 2;
     } else{
-      ndma += 4;
+      ndma += 2;
     }
     
     universalSet("characters", authorId, {
