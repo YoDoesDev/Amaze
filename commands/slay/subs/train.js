@@ -21,7 +21,7 @@ module.exports = {
     const stats = universalGet("characters", authorId);
     
     if(!cash)
-      return message.reply("You don't have enough amash to train!");
+      return message.reply("You don't have enough Amash to train (you need 10 Amash per training)!");
       
     if(!stats)
       return message.reply("You don't own a character in the game yet! Use `!slay start` command to begin!");
