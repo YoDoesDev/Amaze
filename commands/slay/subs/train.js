@@ -1,8 +1,11 @@
 const {
   universalGet, 
   universalSet, 
-  amash
 } = require("../../../utils/database.js");
+
+const {
+  checkXP
+} = require("../../../utils/handlers/leveling.js");
 
 const {
   EmbedBuilder
@@ -20,7 +23,7 @@ module.exports = {
     const cash = universalGet("amash", authorId);
     const stats = universalGet("characters", authorId);
     
-    if(!cash)
+    if(!cash || cash.bucks < 10)
       return message.reply("You don't have enough Amash to train (you need 10 Amash per training)!");
       
     if(!stats)
@@ -36,38 +39,28 @@ module.exports = {
     let odma = stats.dma;
     let oxp = stats.xp;
     
-    let nstr = Math.random() * 4;
-    let nspd = Math.random() * 4;
-    let ndma = Math.random() * 4;
-    let nxp = Math.random() + 2;
+    let nstr = Math.round(Math.random() * 4);
+    let nspd = Math.round(Math.random() * 4);
+    let ndma = Math.round(Math.random() * 4);
+    let nxp = Math.ceil(Math.random() * 10);
     const type = stats.type;
     
     if(type == 1){
       nstr += 4;
-      universalSet("characters", authorId, {
-        str: ostr + nstr,
-        spd: ospd + nspd, 
-        dma: odma + ndma, 
-        xp: oxp + nxp
-      });
     } else if(type == 2){
       nspd += 4;
-      universalSet("characters", authorId, {
-        str: ostr + nstr,
-        spd: ospd + nspd, 
-        dma: odma + ndma, 
-        xp: oxp + nxp
-      });
     } else{
       ndma += 4;
-      universalSet("characters", authorId, {
-        str: ostr + nstr,
-        spd: ospd + nspd, 
-        dma: odma + ndma, 
-        xp: oxp + nxp
-      })
     }
     
+    universalSet("characters", authorId, {
+        str: Math.round(ostr) + nstr,
+        spd: Math.round(ospd) + nspd, 
+        dma: Math.round(odma) + ndma, 
+        xp: oxp + nxp
+      })
+    
+    const leveledUp = await checkXP(authorId);
     const newStats = universalGet("characters", authorId);
     
     const embed = new EmbedBuilder()
@@ -76,6 +69,10 @@ module.exports = {
     .setColor("#3AB9F4")
     .setTimestamp();
     
-    return message.reply({embeds: [embed]})
+    message.reply({embeds: [embed]});
+    
+    if(leveledUp) {
+      return message.channel.send(`Congrats, champ! You just progressed from level ${stats.lvl} to level ${newStats.lvl}! Your HP increases to ${newStats.hp}`);
+    }
   }
 }
