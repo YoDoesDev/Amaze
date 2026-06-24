@@ -1,7 +1,7 @@
 const {
   universalGet, 
   universalSet
-} = require("../cache.js");
+} = require("../database.js");
 
 module.exports = {
   async checkXP(authorId){
