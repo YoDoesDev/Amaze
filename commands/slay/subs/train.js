@@ -72,7 +72,7 @@ module.exports = {
     
     const embed = new EmbedBuilder()
     .setTitle("Training Complete!")
-    .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${Math.round(newStats.str)} (+${Math.round(nstr)})\nSPD: ${Math.round(newStats.spd)}(+${Math.round(nspd)})\nDMA: ${Math.round(newStats.dma)} (+${Math.round(ndma)})\n\nYour character gained ${nxp} xp!`)
+    .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${Math.round(newStats.str)} (+${Math.round(nstr)})\nSPD: ${Math.round(newStats.spd)}(+${Math.round(nspd)})\nDMA: ${Math.round(newStats.dma)} (+${Math.round(ndma)})\n\nYour character gained ${Math.round(nxp)} xp!`)
     .setColor("#3AB9F4")
     .setTimestamp();
     

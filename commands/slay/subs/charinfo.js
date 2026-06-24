@@ -19,7 +19,7 @@ module.exports = {
     const str = Math.round(stats.str);
     const dma = Math.round(stats.dma);
     
-    const xp = stats.xp;
+    const xp = Math.round(stats.xp);
     const lvl = stats.lvl;
     const hp = stats.hp;
     
