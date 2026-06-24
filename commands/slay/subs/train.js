@@ -21,7 +21,7 @@ module.exports = {
     const stats = universalGet("characters", authorId);
     
     if(!cash)
-      return message.reply("You don't have enough amash to hunt!");
+      return message.reply("You don't have enough amash to train!");
       
     if(!stats)
       return message.reply("You don't own a character in the game yet! Use `!start` command to begin!");
@@ -68,6 +68,7 @@ module.exports = {
     const embed = new EmbedBuilder()
     .setTitle("Training Complete!")
     .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${Math.round(newStats.str)} (+${Math.round(nstr)})\nSPD: ${Math.round(newStats.spd)}(+${Math.round(nspd)})\nDMA: ${Math.round(newStats.dma)} (+${Math.round(ndma)})`)
+    .setColor("#3AB9F4")
     .setTimestamp();
     
     return message.reply({embeds: [embed]})
