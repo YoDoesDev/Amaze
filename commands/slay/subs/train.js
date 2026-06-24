@@ -24,7 +24,7 @@ module.exports = {
       return message.reply("You don't have enough amash to train!");
       
     if(!stats)
-      return message.reply("You don't own a character in the game yet! Use `!start` command to begin!");
+      return message.reply("You don't own a character in the game yet! Use `!slay start` command to begin!");
       
     const monie = cash.bucks;
     universalSet("amash", authorId, {
