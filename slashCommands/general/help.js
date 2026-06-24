@@ -1,77 +1,111 @@
-const { EmbedBuilder, SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName("help")
-        .setDescription("Displays all commands or details of a specific command")
-        .addStringOption(option => 
-            option.setName("command")
-                .setDescription("The specific command to get info on")
+        .setName('help')
+        .setDescription('Displays all slash commands categorized or details of a specific command.')
+        .addStringOption(option =>
+            option
+                .setName('command')
+                .setDescription('The command you want specific details about')
                 .setRequired(false)
         ),
-    category: 'General',
-    cooldown: 3,
-
+    category: "General", 
     async execute(interaction) {
-        const { commands } = interaction.client;
-        const commandName = interaction.options.getString("command");
+        if (!interaction.deferred) await interaction.deferReply();
 
-        // CASE 1: General Help (No specific command requested)
-        if (!commandName) {
+        const { slashCommands } = interaction.client;
+        const commandOption = interaction.options.getString('command')?.toLowerCase();
+
+        // --- 1. DISPLAY ALL CATEGORIES (/help) ---
+        if (!commandOption) {
             const categories = {};
 
-            commands.forEach(cmd => {
-                // Handle both Slash (cmd.data.name) and Prefix (cmd.name) compatibility
-                const name = cmd.data ? cmd.data.name : cmd.name;
+            slashCommands.forEach(cmd => {
                 const cat = cmd.category || 'General';
 
+                // Skip the main router command since we are listing sub-commands instead
+                if (cmd.data?.name === 'slay') return;
+
                 if (!categories[cat]) categories[cat] = [];
-                categories[cat].push(`\`${name}\``);
+                categories[cat].push(`\`${cmd.data?.name || cmd.name}\``);
             });
 
+            // DYNAMIC INJECTION FOR THE 'Slay (WIP ⚠️)' CATEGORY
+            try {
+                const subsPath = path.join(process.cwd(), 'slashCommands', 'slay', 'subs');
+                const targetCategory = 'Slay (WIP ⚠️)';
+
+                if (fs.existsSync(subsPath)) {
+                    const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+                    
+                    if (!categories[targetCategory]) categories[targetCategory] = [];
+
+                    subFiles.forEach(file => {
+                        const subName = file.replace('.js', '');
+                        categories[targetCategory].push(`\`slay ${subName}\``);
+                    });
+                }
+            } catch (err) {
+                console.error("Error adding slash subcommands to help menu:", err);
+            }
+
             const embed = new EmbedBuilder()
-                .setTitle('Amaze Command Categories')
+                .setTitle('Amaze Slash Command Categories')
                 .setColor(0x00AE86)
                 .setTimestamp()
-                .setFooter({ text: 'Use /help [command] for details' });
+                .setFooter({ text: 'Use /help [command] for specific layout details' });
 
             for (const [category, cmds] of Object.entries(categories)) {
-                embed.addFields({ 
-                    name: `**${category}**`, 
-                    value: cmds.join(', '), 
-                    inline: false 
+                embed.addFields({
+                    name: `**${category}**`,
+                    value: cmds.length > 0 ? cmds.join(', ') : 'No commands found.',
+                    inline: false
                 });
             }
 
-            return interaction.editReply({ embeds: [embed] });
+            return await interaction.editReply({ embeds: [embed] });
         }
 
-        // CASE 2: Specific Command Help
-        const name = commandName.toLowerCase();
-        // Look for slash data name OR legacy name/aliases
-        const command = commands.get(name) || 
-                        commands.find(c => (c.data && c.data.name === name) || (c.aliases && c.aliases.includes(name)));
+        // --- 2. DISPLAY SPECIFIC COMMAND DETAILS (/help command: hunt) ---
+        let command = slashCommands.get(commandOption);
+
+        if (!command || commandOption === 'slay') {
+            try {
+                const subFilePath = path.join(process.cwd(), 'slashCommands', 'slay', 'subs', `${commandOption}.js`);
+
+                if (fs.existsSync(subFilePath)) {
+                    const subCommand = require(subFilePath);
+
+                    const detailEmbed = new EmbedBuilder()
+                        .setTitle(`Command: /slay ${commandOption}`)
+                        .setColor(0xFFFF00)
+                        .addFields(
+                            { name: 'Description', value: subCommand.description || 'No description provided.' },
+                            { name: 'Category', value: '`Slay (WIP ⚠️)`', inline: true }
+                        );
+
+                    return await interaction.editReply({ embeds: [detailEmbed] });
+                }
+            } catch (err) {
+                console.error("Error searching slash subcommands:", err);
+            }
+        }
 
         if (!command) {
-            return interaction.editReply("I couldn't find that command. Check your spelling!");
+            return await interaction.editReply({ content: "I couldn't find that command. Check your spelling!" });
         }
 
-        const actualName = command.data ? command.data.name : command.name;
-        const actualDesc = command.data ? command.data.description : command.description;
-
         const detailEmbed = new EmbedBuilder()
-            .setTitle(`Command: /${actualName}`)
+            .setTitle(`Command: /${command.data?.name || command.name}`)
             .setColor(0xFFFF00)
             .addFields(
-                { name: 'Description', value: actualDesc || 'No description provided.' },
+                { name: 'Description', value: command.data?.description || 'No description provided.' },
                 { name: 'Category', value: `\`${command.category || 'General'}\``, inline: true }
             );
 
-        // Include aliases if they exist (mostly for legacy support)
-        if (command.aliases && command.aliases.length > 0) {
-            detailEmbed.addFields({ name: 'Aliases', value: `\`${command.aliases.join(', ')}\``, inline: true });
-        }
-
-        return interaction.editReply({ embeds: [detailEmbed] });
-    },
+        return await interaction.editReply({ embeds: [detailEmbed] });
+    }
 };

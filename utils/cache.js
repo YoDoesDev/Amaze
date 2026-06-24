@@ -4,6 +4,7 @@ const amash = new Map();
 const investments = new Map();
 const inventory = new Map();
 const portfolio = new Map();
+const characters = new Map();
 
 const clearCache = caches => {
   const now = Date.now();
@@ -23,5 +24,6 @@ module.exports = {
   investments, 
   inventory, 
   portfolio, 
+  characters, 
   clearCache
 };
