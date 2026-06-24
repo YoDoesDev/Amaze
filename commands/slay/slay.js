@@ -1,6 +1,8 @@
-const fs = require('fs');
+ const fs = require('fs');
 const path = require('path');
 const { EmbedBuilder } = require('discord.js');
+// Import your cooldown utility (Adjust path if your utils folder is structured differently)
+const cooldownUtil = require('../../utils/handlers/cooldowns.js'); 
 
 module.exports = {
     name: "slay",
@@ -34,39 +36,42 @@ module.exports = {
             }
         }
 
-            // If sub-command argument provided (!slay charinfo or !slay ci)
-            try {
-                const subsPath = path.join(__dirname, 'subs');
-                const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+        // --- IF AN ARGUMENT IS PROVIDED (!slay train, !slay buystocks) ---
+        try {
+            const subsPath = path.join(__dirname, 'subs');
+            const subFiles = fs.readdirSync(subsPath).filter(file => file.endsWith('.js'));
+            
+            let targetFile = null;
+        
+            // Loop through the subfiles to check for a name or alias match
+            for (const file of subFiles) {
+                const sub = require(path.join(subsPath, file));
                 
-                let targetFile = null;
-            
-                // Loop through the subfiles to check for a name or alias match
-                for (const file of subFiles) {
-                    const sub = require(path.join(subsPath, file));
-                    
-                    const nameMatch = sub.name && sub.name.toLowerCase() === subcommandName;
-                    const aliasMatch = sub.aliases && Array.isArray(sub.aliases) && sub.aliases.map(a => a.toLowerCase()).includes(subcommandName);
-            
-                    if (nameMatch || aliasMatch) {
-                        targetFile = file;
-                        break;
-                    }
+                const nameMatch = sub.name && sub.name.toLowerCase() === subcommandName;
+                const aliasMatch = sub.aliases && Array.isArray(sub.aliases) && sub.aliases.map(a => a.toLowerCase()).includes(subcommandName);
+        
+                if (nameMatch || aliasMatch) {
+                    targetFile = file;
+                    break;
                 }
-            
-                if (!targetFile) {
-                    return message.reply("That RPG action doesn't exist. Type `!slay` to see available actions.");
-                }
-            
-                const subcommand = require(path.join(subsPath, targetFile));
-                await subcommand.execute(message, args.slice(1));
-            
-            } catch (err) {
-                console.error("Prefix Subcommand Router Error:", err);
-                message.reply("There was an error trying to execute that action.");
             }
+        
+            if (!targetFile) {
+                return message.reply("That RPG action doesn't exist. Type `!slay` to see available actions.");
+            }
+        
+            const subcommand = require(path.join(subsPath, targetFile));
 
+            // --- THE FIX: RUN THE COOLDOWN CHECK ON THE SUBCOMMAND OBJECT ---
+            const isTimedOut = cooldownUtil.handleCooldown(message, subcommand);
+            if (isTimedOut) return; // Stop execution right here if they are on cooldown
+
+            // If clear, execute the subcommand cleanly
+            await subcommand.execute(message, args.slice(1));
+        
+        } catch (err) {
+            console.error("Prefix Subcommand Router Error:", err);
+            message.reply("There was an error trying to execute that action.");
         }
     }
-
-
+};
