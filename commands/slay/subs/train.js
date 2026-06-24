@@ -34,10 +34,12 @@ module.exports = {
     let ostr = stats.str;
     let ospd = stats.spd;
     let odma = stats.dma;
+    let oxp = stats.xp;
     
     let nstr = Math.random() * 4;
     let nspd = Math.random() * 4;
     let ndma = Math.random() * 4;
+    let nxp = Math.random() + 2;
     const type = stats.type;
     
     if(type == 1){
@@ -45,21 +47,24 @@ module.exports = {
       universalSet("characters", authorId, {
         str: ostr + nstr,
         spd: ospd + nspd, 
-        dma: odma + ndma
+        dma: odma + ndma, 
+        xp: oxp + nxp
       });
     } else if(type == 2){
       nspd += 4;
       universalSet("characters", authorId, {
         str: ostr + nstr,
         spd: ospd + nspd, 
-        dma: odma + ndma
+        dma: odma + ndma, 
+        xp: oxp + nxp
       });
     } else{
       ndma += 4;
       universalSet("characters", authorId, {
         str: ostr + nstr,
         spd: ospd + nspd, 
-        dma: odma + ndma
+        dma: odma + ndma, 
+        xp: oxp + nxp
       })
     }
     
@@ -67,7 +72,7 @@ module.exports = {
     
     const embed = new EmbedBuilder()
     .setTitle("Training Complete!")
-    .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${Math.round(newStats.str)} (+${Math.round(nstr)})\nSPD: ${Math.round(newStats.spd)}(+${Math.round(nspd)})\nDMA: ${Math.round(newStats.dma)} (+${Math.round(ndma)})`)
+    .setDescription(`${message.member.displayName}, your character's stats have improved!\n\nSTR: ${Math.round(newStats.str)} (+${Math.round(nstr)})\nSPD: ${Math.round(newStats.spd)}(+${Math.round(nspd)})\nDMA: ${Math.round(newStats.dma)} (+${Math.round(ndma)})\n\nYour character gained ${nxp} xp!`)
     .setColor("#3AB9F4")
     .setTimestamp();
     

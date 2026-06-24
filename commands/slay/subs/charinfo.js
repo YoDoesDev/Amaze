@@ -15,9 +15,9 @@ module.exports = {
     
     const type = stats.type == 1? "Attacker":(stats.type == 2? "Defender":"Endurer");
     
-    const spd = stats.spd;
-    const str = stats.str;
-    const dma = stats.dma;
+    const spd = Math.round(stats.spd);
+    const str = Math.round(stats.str);
+    const dma = Math.round(stats.dma);
     
     const xp = stats.xp;
     const lvl = stats.lvl;
