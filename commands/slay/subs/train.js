@@ -42,7 +42,7 @@ module.exports = {
     let nstr = Math.round(Math.random() * 4);
     let nspd = Math.round(Math.random() * 4);
     let ndma = Math.round(Math.random() * 4);
-    let nxp = Math.ceil(Math.random() * 10);
+    let nxp = Math.ceil(Math.random() * 16) + 10;
     const type = stats.type;
     
     if(type == 1){
