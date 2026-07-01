@@ -6,6 +6,10 @@ module.exports = {
     if (process.env.TOPGG_TOKEN) {
       // 1. Top.gg Autoposter
       const ap = AutoPoster(process.env.TOPGG_TOKEN, client);
+
+      ap.on("error", err => {
+  console.error("TopGG error:", err);
+});
       try{
         ap.on('posted', () => {
         console.log('>>> [TOP.GG] Stats synced successfully!');
