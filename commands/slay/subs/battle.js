@@ -96,8 +96,6 @@ try{
 
             game.isAccepted = interaction.customId === "accept";
 
-            await interaction.deferUpdate();
-
             await interaction.update({
                 embeds: [ask],
                 components: []
