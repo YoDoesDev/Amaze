@@ -103,7 +103,8 @@ try{
                 components: []
             });
         } 
-        catch {
+        catch (err) {
+            console.error(err)
             games.delete(message.channel.id);
             return battleMessage.edit({
                 content: `${game.opp.user.username} did not respond in time!`,
