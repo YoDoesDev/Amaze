@@ -119,7 +119,8 @@ module.exports = {
         str: fstr, 
         spd: fspd, 
         dma: fdma, 
-        type: ftype
+        type: ftype,
+        hp: 100,
       });
       
       const stats = universalGet("characters", authorId);
