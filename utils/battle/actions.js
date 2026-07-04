@@ -30,6 +30,8 @@ const takeTurn = (player1, player2) => {
     result: `${first.user.username} has defeated ${second.user.username}!`,
     winner: first,
     loser: second,
+    first,
+    second
 };
     }
 
@@ -53,12 +55,16 @@ const takeTurn = (player1, player2) => {
     result: `${second.user.username} has defeated ${first.user.username}!`,
     winner: second,
     loser: first,
+    first,
+    second
 };
     }
 
     return {
         result: null,
         winner: null,
+        first,
+        second
     };
 }
 

@@ -133,11 +133,18 @@ try{
         game.self.xp = char.xp;
         game.opp.xp = char2.xp;
 
+        let turns = 0;
         let isBattleOver = { result: false };
 
         while(!isBattleOver.result){
             isBattleOver = takeTurn(game.self, game.opp);
+            turns++;
             if(isBattleOver.result) break;
+            if(turns % 2 == 0){
+                setTimeout(() => {
+                    message.channel.send(`:shield: Turn ${turns}: \n<@${game.self.user.id}> (HP: ${game.self.hp}) vs <@${game.opp.user.username}> (HP: ${game.opp.hp})`);
+                }, 250);
+            }
         }
 
         const winner = isBattleOver.winner;
@@ -153,7 +160,7 @@ try{
         const resultEmbed = new EmbedBuilder()
             .setColor("#bcdf1f")
             .setTitle("Battle Result")
-            .setDescription(`${winner.user.username} has defeated ${loser.user.username}!`)
+            .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.username}>!`)
             .addFields(
                 { name: "Winner", value: `${winner.user.username} (HP: ${winner.hp})` },
                 { name: "Loser", value: `${loser.user.username} (HP: ${loser.hp})` }
