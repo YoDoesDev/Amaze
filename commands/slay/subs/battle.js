@@ -11,6 +11,10 @@ const {
 } = require("../../../utils/database.js");
 
 const {
+    checkXP,
+} = require("../../../utils/battle/leveling.js");
+
+const {
     takeTurn,
 } = require("../../../utils/battle/actions.js");
 
@@ -169,6 +173,9 @@ try{
             );
 
         await message.channel.send({ embeds: [resultEmbed] });
+
+        await checkXP(winner.user.id);
+        await checkXP(loser.user.id);
 
         } finally {
             games.delete(message.channel.id);
