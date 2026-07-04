@@ -10,6 +10,10 @@ const {
     universalSet,
 } = require("../../../utils/database.js");
 
+const {
+    takeTurn,
+} = require("../../../utils/battle/actions.js");
+
 const games = new Map();
 
 module.exports = {
@@ -27,6 +31,7 @@ module.exports = {
                 str: null,
                 dma: null,
                 spd: null,
+                xp: null,
             },
             opp: {
                 user: message.mentions.users.first(),
@@ -34,6 +39,7 @@ module.exports = {
                 str: null,
                 dma: null,
                 spd: null,
+                xp: null,
             }
         };
 
@@ -58,7 +64,7 @@ module.exports = {
         }
 
         games.set(message.channel.id, game);
-
+try{
         const ask = new EmbedBuilder()
             .setColor("#006eff")
             .setTitle("Battle Request")
@@ -113,8 +119,50 @@ module.exports = {
             return games.delete(message.channel.id);
         }
 
-        
+        game.self.hp = char.hp;
+        game.self.str = char.str;
+        game.self.dma = char.dma;
+        game.self.spd = char.spd;
 
+        game.opp.hp = char2.hp;
+        game.opp.str = char2.str;
+        game.opp.dma = char2.dma;
+        game.opp.spd = char2.spd;
+
+        game.self.xp = char.xp;
+        game.opp.xp = char2.xp;
+
+        let isBattleOver = { result: false };
+
+        while(!isBattleOver.result){
+            isBattleOver = takeTurn(game.self, game.opp);
+            if(isBattleOver.result) break;
+        }
+
+        const winner = isBattleOver.winner;
+        const loser = isBattleOver.loser;
+
+        universalSet("characters", winner.user.id, {
+            xp: winner.xp,
+        });
+        universalSet("characters", loser.user.id, {
+            xp: loser.xp,
+        });
+
+        const resultEmbed = new EmbedBuilder()
+            .setColor("#bcdf1f")
+            .setTitle("Battle Result")
+            .setDescription(`${winner.user.username} has defeated ${loser.user.username}!`)
+            .addFields(
+                { name: "Winner", value: `${winner.user.username} (HP: ${winner.hp})` },
+                { name: "Loser", value: `${loser.user.username} (HP: ${loser.hp})` }
+            );
+
+        await message.channel.send({ embeds: [resultEmbed] });
+
+        } finally {
+            games.delete(message.channel.id);
+        }
     }
 }
 
