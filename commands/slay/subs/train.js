@@ -5,7 +5,7 @@ const {
 
 const {
   checkXP
-} = require("../../../utils/battle/leveling.js");
+} = require("../../../utils/battle/leveling.js"); 
 
 const {
   EmbedBuilder
