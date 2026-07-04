@@ -142,7 +142,7 @@ try{
             if(isBattleOver.result) break;
             if(turns % 2 == 0){
                 setTimeout(() => {
-                    message.channel.send(`:shield: Turn ${turns}: \n<@${game.self.user.id}> (HP: ${game.self.hp}) vs <@${game.opp.user.username}> (HP: ${game.opp.hp})`);
+                    message.channel.send(`:shield: Turn ${turns}: \n<@${game.self.user.id}> (HP: ${game.self.hp}) vs <@${game.opp.user.id}> (HP: ${game.opp.hp})`);
                 }, 250);
             }
         }
