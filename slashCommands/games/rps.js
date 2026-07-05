@@ -80,7 +80,7 @@ module.exports = {
       game.oppId = targetUser.id;
     }
 
-    ongGames.set(interaction.channel.id, game);
+    ongGames.set(interaction.channel?interaction.channel.id:" ", game);
 
     // =======================================================
     // PHASE 1: MULTIPLAYER CHALLENGE LOBBY (Using editReply)
@@ -113,7 +113,7 @@ module.exports = {
         await acceptInteraction.deferUpdate();
 
         if (acceptInteraction.customId === "decline") {
-          ongGames.delete(interaction.channel.id);
+          ongGames.delete(interaction.channel?interaction.channel.id:" ");
           return interaction.editReply({ content: "Challenge declined!", embeds: [], components: [] });
         }
 
@@ -121,7 +121,7 @@ module.exports = {
         await interaction.deleteReply().catch(() => null); // Clean up the lobby message
 
       } catch (err) {
-        ongGames.delete(interaction.channel.id);
+        ongGames.delete(interaction.channel?interaction.channel.id:" ");
         return interaction.editReply({ content: "⌛ Match timed out!", embeds: [], components: [] });
       }
     } else {
