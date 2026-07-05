@@ -6,10 +6,11 @@ const {
   EmbedBuilder, 
   ComponentType 
 } = require('discord.js');
-const { emojis } = require('../../utils/config.js');
+const { emojis } = require('../../utils/config.js'); // Assuming this is present in your local directories
 const ongGames = new Map();
 
 module.exports = {
+  // Update the data mapping setup for User-Installable Context frameworks
   data: new SlashCommandBuilder()
     .setName("rps")
     .setDescription("Play rock paper scissors with friends or a bot.")
@@ -22,13 +23,17 @@ module.exports = {
       option.setName("opponent")
         .setDescription("The user you want to duel (leave blank to play against the bot)")
         .setRequired(false)
-    ),
+    )
+    // Essential flags to make this work anywhere as a user command setup
+    .setIntegrationTypes([0, 1]) // 0 = Guild Install, 1 = User Install
+    .setContexts([0, 1, 2]),    // 0 = Guilds, 1 = Bot DMs, 2 = Group DMs / External Guilds
 
   category: "Games",
   cooldown: 10,
 
   async execute(interaction) {
-    // Assuming your main listener has already done: await interaction.deferReply();
+    // Graceful fallback to interaction.channelId since interaction.channel can be null in User App installations
+    const channelId = interaction.channelId || interaction.user.id;
     
     const totalRounds = interaction.options.getInteger("rounds");
     const targetUser = interaction.options.getUser("opponent");
@@ -40,9 +45,9 @@ module.exports = {
       });
     }
 
-    if (ongGames.has((interaction.channel)? interaction.channel.id : ".")) {
+    if (ongGames.has(channelId)) {
       return interaction.editReply({ 
-        content: "There is already a game going on in this channel. Try somewhere else maybe?" 
+        content: "There is already a game going on here. Try somewhere else maybe?" 
       });
     }
 
@@ -53,7 +58,7 @@ module.exports = {
       opp: "bot",
       oppId: "bot",
       isAccepted: false,
-      channel: interaction.channel?interaction.channel.id : " ",
+      channel: channelId,
       rounds: totalRounds,
       crntRound: 1,
       selfChoice: "TBD",
@@ -80,10 +85,10 @@ module.exports = {
       game.oppId = targetUser.id;
     }
 
-    ongGames.set(interaction.channel?interaction.channel.id:" ", game);
+    ongGames.set(channelId, game);
 
     // =======================================================
-    // PHASE 1: MULTIPLAYER CHALLENGE LOBBY (Using editReply)
+    // PHASE 1: MULTIPLAYER CHALLENGE LOBBY
     // =======================================================
     if (game.opp !== "bot") {
       const challEmbed = new EmbedBuilder()
@@ -97,7 +102,6 @@ module.exports = {
         new ButtonBuilder().setCustomId("decline").setLabel("Decline").setEmoji("❌").setStyle(ButtonStyle.Danger)
       );
 
-      // editReply edits the original deferred loading message and returns the response object
       const askMessage = await interaction.editReply({
         content: `<@${targetUser.id}>`,
         embeds: [challEmbed],
@@ -113,30 +117,24 @@ module.exports = {
         await acceptInteraction.deferUpdate();
 
         if (acceptInteraction.customId === "decline") {
-          ongGames.delete(interaction.channel?interaction.channel.id:" ");
+          ongGames.delete(channelId);
           return interaction.editReply({ content: "Challenge declined!", embeds: [], components: [] });
         }
 
         game.isAccepted = true;
-        await interaction.deleteReply().catch(() => null); // Clean up the lobby message
-
       } catch (err) {
-        ongGames.delete(interaction.channel?interaction.channel.id:" ");
+        ongGames.delete(channelId);
         return interaction.editReply({ content: "⌛ Match timed out!", embeds: [], components: [] });
       }
     } else {
-      // For a bot match, update the deferred reply text and clear it immediately
       await interaction.editReply({ content: "🤖 Starting a match against Amaze Bot..." }).catch(() => null);
-      setTimeout(async () => {
-        await interaction.deleteReply().catch(() => null);
-      }, 1500);
+      await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
     // =======================================================
     // PHASE 2: RUNTIME MULTI-ROUND GAME ENGINE
     // =======================================================
-    // (Note: Keep using interaction.channel.send here so the actual game 
-    // loops can delete and resend fresh messages per round cleanly!)
+    // Instead of deleting/sending new channel messages, we continuously use editReply
     runGameEngine(interaction, game);
   }
 };
@@ -168,7 +166,9 @@ async function runGameEngine(interaction, game) {
       .setTimestamp();
   };
 
-  const gameMessage = await interaction.channel.send({
+  // Safe approach for User Apps: We modify our interaction token directly
+  const gameMessage = await interaction.editReply({
+    content: "",
     embeds: [renderStatusEmbed()],
     components: [weaponRow]
   });
@@ -202,7 +202,7 @@ async function runGameEngine(interaction, game) {
       game.oppChoice = weapons[Math.floor(Math.random() * weapons.length)];
     }
 
-    await gameMessage.edit({ embeds: [renderStatusEmbed()] }).catch(() => null);
+    await interaction.editReply({ embeds: [renderStatusEmbed()] }).catch(() => null);
 
     if (game.selfChoice !== 'TBD' && game.oppChoice !== 'TBD') {
       collector.stop('round_complete');
@@ -212,7 +212,7 @@ async function runGameEngine(interaction, game) {
   collector.on('end', async (_, reason) => {
     if (reason !== 'round_complete') {
       ongGames.delete(game.channel);
-      return gameMessage.edit({ content: "🛑 Match canceled due to round selection inactivity.", embeds: [], components: [] }).catch(() => null);
+      return interaction.editReply({ content: "🛑 Match canceled due to round selection inactivity.", embeds: [], components: [] }).catch(() => null);
     }
 
     let roundResult = "";
@@ -235,7 +235,7 @@ async function runGameEngine(interaction, game) {
       .setDescription(`${roundResult}\n\n🏆 **Current Match Standings:**\n• ${game.self}: **${game.selfW}**\n• ${game.opp}: **${game.oppW}**`)
       .setTimestamp();
 
-    await gameMessage.edit({ embeds: [intermediateEmbed], components: [] }).catch(() => null);
+    await interaction.editReply({ embeds: [intermediateEmbed], components: [] }).catch(() => null);
 
     setTimeout(async () => {
       game.crntRound++;
@@ -252,9 +252,9 @@ async function runGameEngine(interaction, game) {
           .setTimestamp();
 
         ongGames.delete(game.channel);
-        return gameMessage.edit({ embeds: [finalEmbed], components: [] }).catch(() => null);
+        return interaction.editReply({ embeds: [finalEmbed], components: [] }).catch(() => null);
       } else {
-        await gameMessage.delete().catch(() => null);
+        // Continuous looping on the interaction token ensures it works outside your native guilds!
         runGameEngine(interaction, game);
       }
     }, 3500);
