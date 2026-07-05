@@ -53,7 +53,7 @@ module.exports = {
       opp: "bot",
       oppId: "bot",
       isAccepted: false,
-      channel: interaction.channel.id,
+      channel: interaction.channel?interaction.channel.id : " ",
       rounds: totalRounds,
       crntRound: 1,
       selfChoice: "TBD",
