@@ -144,13 +144,16 @@ try{
             isBattleOver = takeTurn(game.self, game.opp);
             turns++;
             if(isBattleOver.result) break;
-            /*
-            if(turns % 2 == 0){
+            
+            await new Promise(resolve => {
                 setTimeout(() => {
-                    message.channel.send(`:shield: Turn ${turns}: \n<@${game.self.user.id}> (HP: ${game.self.hp}) vs <@${game.opp.user.id}> (HP: ${game.opp.hp})`);
-                }, 250);
-            }
-            */
+                    if(turns % 2 == 0){
+                        message.channel.send(`:shield: Turn ${turns}: \n<@${game.self.user.id}> (HP: ${game.self.hp}) vs <@${game.opp.user.id}> (HP: ${game.opp.hp})`);
+                    }
+                    resolve();
+                }, 400);
+            })
+            
         }
 
         const winner = isBattleOver.winner;
