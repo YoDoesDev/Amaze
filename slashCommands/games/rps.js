@@ -40,7 +40,7 @@ module.exports = {
       });
     }
 
-    if (ongGames.has((interaction.channel)? interaction.channel.id || ".") {
+    if (ongGames.has((interaction.channel)? interaction.channel.id : ".")) {
       return interaction.editReply({ 
         content: "There is already a game going on in this channel. Try somewhere else maybe?" 
       });
