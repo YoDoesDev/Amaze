@@ -30,7 +30,7 @@ module.exports = {
     const hp = stats.hp;
     
     const stat = new EmbedBuilder()
-      .setTitle(`${member.displayName}'s Stats:`)
+      .setTitle(`${interaction.member.displayName?message.member.displayName : interaction.user.globalName}'s Stats:`)
       .setDescription(`⚔️ Type: ${type}\n\n 🏃‍♂️ SPD: ${spd}\n 🗡 STR: ${str}\n🧱 DMA: ${dma}\n🟩 HP: ${hp}\n\n↗️ LVL: ${lvl}\n🧘‍♂️ XP: ${xp}`)
       .setTimestamp();
     
