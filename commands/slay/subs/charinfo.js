@@ -24,7 +24,7 @@ module.exports = {
     const hp = stats.hp;
     
     const stat = new EmbedBuilder()
-    .setTitle(`${message.member.displayName}'s Stats:`)
+    .setTitle(`${message.member.displayName? message.member.displayName:message.author.globalName}'s Stats:`)
     .setDescription(`⚔️ Type: ${type}\n\n🏃‍♂️ SPD: ${spd}\n🗡 STR: ${str}\n🧱 DMA: ${dma}\n🟩 HP: ${hp}\n\n↗️ LVL: ${lvl}\n🧘‍♂️ XP: ${xp}`)
     .setTimestamp()
     .setColor("#D4AF37");
