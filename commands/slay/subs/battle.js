@@ -169,7 +169,7 @@ try{
         const resultEmbed = new EmbedBuilder()
             .setColor("#bcdf1f")
             .setTitle("Battle Result")
-            .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.username}>!`)
+            .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
             .addFields(
                 { name: "Winner", value: `${winner.user.username} (HP: ${winner.hp})` },
                 { name: "Loser", value: `${loser.user.username} (HP: ${loser.hp})` }
