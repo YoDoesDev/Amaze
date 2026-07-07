@@ -9,38 +9,42 @@ const {
 
 const path = require("path");
 
-const background = path.join(__dirname, "..", "assets", "battle", "background.png");
-const healthBar = path.join(__dirname, "..", "assets", "battle", "healthBar.png");
-const sword = path.join(__dirname, "..", "assets", "battle", "sword.png");
-const cloud = path.join(__dirname, "..", "assets", "battle", "fightingCloud.png");
+// --- PERFORMANCE OPTIMIZATION: LOAD STATIC ASSETS ONCE ON BOOT ---
+const backgroundPath = path.join(__dirname, "..", "assets", "battle", "background.png");
+const healthBarPath = path.join(__dirname, "..", "assets", "battle", "healthBar.png");
+const swordPath = path.join(__dirname, "..", "assets", "battle", "sword.png");
+const cloudPath = path.join(__dirname, "..", "assets", "battle", "fightingCloud.png");
+
+let bg, hpBar, swordImg, cloudImg;
+let assetsLoaded = false;
+
+async function initAssets() {
+    if (assetsLoaded) return;
+    bg = await loadImage(backgroundPath);
+    hpBar = await loadImage(healthBarPath);
+    swordImg = await loadImage(swordPath);
+    cloudImg = await loadImage(cloudPath);
+    assetsLoaded = true;
+}
+
+// Pre-load assets immediately when the module is required
+initAssets().catch(err => console.error("Failed to pre-load battle assets:", err));
 
 async function render(self, opp, stage, maxSelfHP, maxOppHP) {
+    // Ensure assets are loaded just in case the initial boot call wasn't finished
+    await initAssets();
+
     const canvas = createCanvas(1280, 720);
     const ctx = canvas.getContext("2d");
 
-    const bg = await loadImage(background);
-    const hpBar = await loadImage(healthBar);
-    const swordImg = await loadImage(sword);
-    const cloudImg = await loadImage(cloud);
-
-    const selfAvatar = await loadImage(
-        self.user.displayAvatarURL({
-            extension: "png",
-            size: 512,
-        })
-    );
-
-    const oppAvatar = await loadImage(
-        opp.user.displayAvatarURL({
-            extension: "png",
-            size: 512,
-        })
-    );
+    // Fetch user avatars (Optimize later by pre-loading these before the match loop!)
+    const selfAvatar = await loadImage(self.user.displayAvatarURL({ extension: "png", size: 512 }));
+    const oppAvatar = await loadImage(opp.user.displayAvatarURL({ extension: "png", size: 512 }));
 
     // 1. Draw the Background Arena
     ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
-    // 2. Global UI: Render Upper Corner Health Bars (Visible in ALL stages, including mid-fight)
+    // 2. Global UI: Render Upper Corner RED Health Bars (Visible in ALL stages, including mid-fight)
     drawTopUI(ctx, hpBar, self, opp, maxSelfHP, maxOppHP, canvas.width);
 
     const leftX = 220;
@@ -81,57 +85,78 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
 
 // Dedicated function for Top Header Health Status UI
 function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
-    const hpWidth = 300;  // Slightly wider bar for the top header look
-    const hpHeight = 35;  // Slightly thicker bar
+    const hpWidth = 300;  // Width of the fillable bar area
+    const hpHeight = 35;  // Height of the fillable bar area
     const topY = 40;      // Distance from top edge
     
     const selfLeftX = 50;                     // Upper Left Corner for Self
-    const oppLeftX = canvasWidth - 50 - 300;  // Upper Right Corner for Opponent (width adjusted)
+    const oppLeftX = canvasWidth - 50 - 300;  // Upper Right Corner for Opponent
 
     // --- LEFT PLAYER (SELF) HEALTH BAR ---
     ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
     const selfRatio = Math.max(0, self.hp) / maxSelfHP;
-    ctx.fillStyle = "#32d74b";
+    
+    // Fill with Red Color based on HP percentage
+    ctx.fillStyle = "#ff3b30"; 
     ctx.fillRect(selfLeftX, topY, selfRatio * hpWidth, hpHeight);
     
-    // Border & Text
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 3;
+    // Outer Border
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 4;
     ctx.strokeRect(selfLeftX, topY, hpWidth, hpHeight);
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 22px sans-serif";
+    
+    // Text Styling (Username & HP Values)
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px sans-serif";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 4;
+    
     ctx.textAlign = "left";
     ctx.fillText(self.user.username, selfLeftX, topY - 15);
+    
     ctx.textAlign = "center";
-    ctx.fillText(`${Math.max(0, self.hp)}/${maxSelfHP}`, selfLeftX + (hpWidth / 2), topY + 26);
+    ctx.fillText(`${Math.max(0, self.hp)} / ${maxSelfHP}`, selfLeftX + (hpWidth / 2), topY + 26);
+    ctx.shadowBlur = 0; // Reset shadow
 
     // --- RIGHT PLAYER (OPPONENT) HEALTH BAR ---
     ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
     const oppRatio = Math.max(0, opp.hp) / maxOppHP;
-    ctx.fillStyle = "#32d74b";
+    
+    // Fill with Red Color based on HP percentage
+    ctx.fillStyle = "#ff3b30";
     ctx.fillRect(oppLeftX, topY, oppRatio * hpWidth, hpHeight);
     
-    // Border & Text
+    // Outer Border
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 4;
     ctx.strokeRect(oppLeftX, topY, hpWidth, hpHeight);
-    ctx.fillStyle = "#fff";
+    
+    // Text Styling
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px sans-serif";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowBlur = 4;
+    
     ctx.textAlign = "right";
     ctx.fillText(opp.user.username, oppLeftX + hpWidth, topY - 15);
+    
     ctx.textAlign = "center";
-    ctx.fillText(`${Math.max(0, opp.hp)}/${maxOppHP}`, oppLeftX + (hpWidth / 2), topY + 26);
+    ctx.fillText(`${Math.max(0, opp.hp)} / ${maxOppHP}`, oppLeftX + (hpWidth / 2), topY + 26);
+    ctx.shadowBlur = 0; // Reset shadow
 }
 
 // Handles drawing avatars and weapons during standard frames
 function drawPlayer(ctx, swordImg, x, y, avatar, player, flipSword, avatarSize) {
-    // 1. Render Avatar with Isolated Circular Clipping Mask
+    // Render Avatar with Isolated Circular Clipping Mask
     ctx.save(); 
     ctx.beginPath();
     ctx.arc(x + avatarSize / 2, y + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
     ctx.closePath();
     ctx.clip();
     ctx.drawImage(avatar, x, y, avatarSize, avatarSize);
-    ctx.restore(); // Completely clears the clip mask so it doesn't break other drawings
+    ctx.restore(); 
 
-    // 2. Render Weapon Elements
+    // Render Weapon Elements
     ctx.save();
     if (flipSword) {
         ctx.translate(x + 165, y + 165);
