@@ -1,7 +1,7 @@
 const {
     createCanvas,
     loadImage,
-} = require("canvas");
+} = require("@napi-rs/canvas");
 
 const {
     AttachmentBuilder,
