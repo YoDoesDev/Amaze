@@ -142,7 +142,9 @@ module.exports = {
             
             let turns = 0;
             let isBattleOver = { result: false };
-            const firstImage = await render(game.self, game.opp, 1);
+            const selfMaxHP = universalGet("characters", game.self.hp);
+            const oppMaxHP = universalGet("characters", game.opp.hp);
+            const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
             let lastImage, progression;
             const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
             
@@ -163,14 +165,14 @@ module.exports = {
                 if (isBattleOver.result) {
                     await wait(400);
                     
-                    lastImage = await render(game.self, game.opp, 3);
+                    lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
                     break;
                 }
                 
                 if (turns % 4 === 0) {
                     await wait(400);
                     
-                    progression = await render(game.self, game.opp, 2);
+                    progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
                     
                     const embed = new EmbedBuilder()
                         .setDescription(`Turn ${turns}`)
