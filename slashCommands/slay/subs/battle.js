@@ -29,12 +29,11 @@ module.exports = {
     data: new SlashCommandBuilder()
         .setName("battle")
         .setDescription("Battle with another character.")
-        .addUserOption(option => 
-            option
-                .setName("opponent")
-                .setDescription("The user you want to challenge")
+        .addUserOption(option =>{
+            return option.setName("opponent")
+                .setDescription("The user you want to battle.")
                 .setRequired(true)
-        ),
+}),
     cooldown: 10,
     async execute(interaction) {
         const opponentUser = interaction.options.getUser("opponent");
