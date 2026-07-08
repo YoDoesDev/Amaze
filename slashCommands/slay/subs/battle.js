@@ -33,11 +33,11 @@ module.exports = {
             return option.setName("opponent")
                 .setDescription("The user you want to battle.")
                 .setRequired(true)
-}),
+        }),
     cooldown: 10,
     async execute(interaction) {
         const opponentUser = interaction.options.getUser("opponent");
-        
+
         const game = {
             channel: interaction.channelId,
             isAccepted: false,
@@ -59,7 +59,7 @@ module.exports = {
             }
         };
 
-        // 1. Initial Validations (Now using editReply because interaction is already deferred)
+        // 1. Initial Validations
         if (games.has(interaction.channelId)) {
             return interaction.editReply({ content: "A battle is already in progress in this channel." });
         }
@@ -116,9 +116,9 @@ module.exports = {
                     filter: i => i.user.id === game.opp.user.id,
                     time: 30000
                 });
-                
+
                 game.isAccepted = buttonInteraction.customId === "accept";
-                
+
                 // Clear buttons out right away on choice execution
                 await buttonInteraction.update({
                     embeds: [ask],
@@ -159,9 +159,11 @@ module.exports = {
 
             let turns = 0;
             let isBattleOver = { result: false };
-            const selfMaxHP = universalGet("characters", game.self.hp);
-            const oppMaxHP = universalGet("characters", game.opp.hp);
             
+            //  FIX: Fetch character documents properly, pull max values safely
+            const selfMaxHP = char.hp || 1000;
+            const oppMaxHP = char2.hp || 1000;
+
             // Generate canvas entry asset frame
             const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
             let lastImage, progression;
@@ -172,8 +174,6 @@ module.exports = {
                 .setImage("attachment://battle.png")
                 .setColor("#006eff");
 
-            // Since we already used editReply for the challenge acceptance, we send a fresh message 
-            // via followUp for the actual game loop animation frames so the channel stays clean.
             const battleMessage = await interaction.followUp({
                 embeds: [firstEmbed],
                 files: [firstImage]
@@ -199,7 +199,8 @@ module.exports = {
                         .setImage("attachment://battle.png")
                         .setColor("#006eff");
 
-                    await battleMessage.edit({
+                    //  FIX: Bypasses local message cache lookup 
+                    await interaction.webhook.editMessage(battleMessage.id, {
                         embeds: [loopEmbed],
                         files: [progression]
                     });
@@ -219,7 +220,11 @@ module.exports = {
                 .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
                 .setImage("attachment://battle.png");
 
-            await battleMessage.edit({ embeds: [resultEmbed], files: [lastImage] });
+            //  FIX: Bypasses local message cache lookup
+            await interaction.webhook.editMessage(battleMessage.id, { 
+                embeds: [resultEmbed], 
+                files: [lastImage] 
+            });
 
             await checkXP(winner.user.id);
             await checkXP(loser.user.id);
