@@ -114,8 +114,8 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth, s
     const oppLeftX = canvasWidth - 60 - 300;  // Upper Right Corner for Opponent asset
 
     // --- DEFENSIVE SAFEGUARDS AGAINST NaN ---
-    const safeMaxSelf = maxSelfHP || self.maxHp || self.maxHP || self.max_hp || self.hp || 1000;
-    const safeMaxOpp = maxOppHP || opp.maxHp || opp.maxHP || opp.max_hp || opp.hp || 1000;
+    const safeMaxSelf = maxSelfHP;
+    const safeMaxOpp = maxOppHP;
 
     // --- HARDCODED PRECISE BOX SIZES ---
     const rectWidth = 232;          
