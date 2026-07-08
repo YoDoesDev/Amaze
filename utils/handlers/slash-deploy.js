@@ -8,28 +8,30 @@ const { clientId, guildId } = require('../config.js');
 const commands = [];
 const slashPath = path.join(__dirname, '../../slashCommands');
 
-// --- IGNORE CONFIGURATION ---
-// Add any file name (e.g., 'slay.js') or folder name (e.g., 'slay') you want to skip here.
-const ignoredItems = ['slay.js', 'slay'];
+// --- PATH-BASED IGNORE CONFIGURATION ---
+// Use lowercase relative paths from inside your slashCommands directory.
+const ignoredPaths = [
+    'slay/slay.js' 
+];
 
 const slashFolders = fs.readdirSync(slashPath);
 for (const folder of slashFolders) {
-    // Skip if the folder name matches anything in our ignore list
-    if (ignoredItems.some(ignored => folder.toLowerCase() === ignored.toLowerCase())) {
-        console.log(`>>> [SYSTEM] Skipping ignored folder/category: "${folder}"`);
-        continue;
-    }
-
     const folderPath = path.join(slashPath, folder);
     const isDir = fs.lstatSync(folderPath).isDirectory();
+    
     const commandFiles = isDir 
         ? fs.readdirSync(folderPath).filter(file => file.endsWith('.js'))
         : [folder].filter(file => file.endsWith('.js'));
 
     for (const file of commandFiles) {
-        // Skip if the file name matches anything in our ignore list
-        if (ignoredItems.some(ignored => file.toLowerCase() === ignored.toLowerCase())) {
-            console.log(`>>> [SYSTEM] Skipping ignored command file: "${file}"`);
+        // Construct a clean relative path identifier: e.g. "slay/slay.js" or "utility.js"
+        const relativeKey = isDir 
+            ? `${folder}/${file}`.toLowerCase() 
+            : file.toLowerCase();
+
+        // Check if this specific file path is on the hit list
+        if (ignoredPaths.includes(relativeKey)) {
+            console.log(`>>> [SYSTEM] Explicitly ignoring targeted file: "${relativeKey}"`);
             continue;
         }
 
