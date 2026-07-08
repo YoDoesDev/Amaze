@@ -6,6 +6,9 @@ const cmdData = new SlashCommandBuilder()
     .setName('slay')
     .setDescription('Main entry point for the RPG game');
 
+// Create an array to track options manually to bypass internal builder issues
+const rawSubcommands = [];
+
 const subsPath = path.join(__dirname, "subs");
 
 if (fs.existsSync(subsPath)) {
@@ -15,26 +18,22 @@ if (fs.existsSync(subsPath)) {
         const subcommandPath = path.join(subsPath, file);
         const subcommand = require(subcommandPath);
         
-        // If your subfile exports its builder under 'data'
         if (subcommand.data) {
-            // Convert your SlashCommandBuilder to a raw JSON object
+            // Get the clean, complete JSON representation of the subcommand
             const rawData = subcommand.data.toJSON();
-            
-            cmdData.addSubcommand(sub => {
-                sub
-                    .setName(rawData.name)
-                    .setDescription(rawData.description);
-                
-                // If your subfile has options, spread them cleanly into the internal API layout
-                if (rawData.options) {
-                    sub.options = [...rawData.options];
-                }
-                
-                return sub;
-            });
+            rawSubcommands.push(rawData);
         }
     }
 }
+
+// FORCE OVERRIDE: Modify the output of toJSON to cleanly map the raw structures
+cmdData.toJSON = function() {
+    return {
+        name: this.name,
+        description: this.description,
+        options: rawSubcommands // Directly inject the subcommands without letting the builder break
+    };
+};
 
 module.exports = {
     category: "Slay (WIP ⚠️)",
