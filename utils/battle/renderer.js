@@ -37,14 +37,14 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
     const canvas = createCanvas(1280, 720);
     const ctx = canvas.getContext("2d");
 
-    // Fetch user avatars (Optimize later by pre-loading these before the match loop!)
+    // Fetch user avatars
     const selfAvatar = await loadImage(self.user.displayAvatarURL({ extension: "png", size: 512 }));
     const oppAvatar = await loadImage(opp.user.displayAvatarURL({ extension: "png", size: 512 }));
 
     // 1. Draw the Background Arena
     ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
-    // 2. Global UI: Render Upper Corner RED Health Bars (Visible in ALL stages, including mid-fight)
+    // 2. Global UI: Render Upper Corner RED Health Bars
     drawTopUI(ctx, hpBar, self, opp, maxSelfHP, maxOppHP, canvas.width);
 
     const leftX = 220;
@@ -56,26 +56,49 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
     if (stage === 2) {
         // Mid-fight: Draw the cartoon cloud over the player areas
         ctx.drawImage(cloudImg, 350, 120, 580, 430);
-    } else {
-        // Stage 1 (Intro/Turns) or Stage 3 (Result)
-        drawPlayer(ctx, swordImg, leftX, y, selfAvatar, self, false, avatarSize);
-        drawPlayer(ctx, swordImg, rightX, y, oppAvatar, opp, true, avatarSize);
+    } else if (stage === 3) {
+        // Stage 3 (Result): Detect who lost to handle rotation cleanly without clipping dual images
+        const loser = self.hp <= 0 ? "left" : "right";
 
-        if (stage === 3) {
-            const loser = self.hp <= 0 ? "left" : "right";
+        if (loser === "left") {
+            // Draw right player (winner) normally
+            drawPlayer(ctx, swordImg, rightX, y, oppAvatar, opp, true, avatarSize);
 
+            // Draw left player knocked out (Rotated 90 degrees)
             ctx.save();
-            if (loser === "left") {
-                ctx.translate(leftX + avatarSize / 2, y + avatarSize / 2 + 60);
-                ctx.rotate(-Math.PI / 2);
-                ctx.drawImage(selfAvatar, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
-            } else {
-                ctx.translate(rightX + avatarSize / 2, y + avatarSize / 2 + 60);
-                ctx.rotate(Math.PI / 2);
-                ctx.drawImage(oppAvatar, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
-            }
+            ctx.translate(leftX + avatarSize / 2, y + avatarSize / 2);
+            ctx.rotate(-Math.PI / 2);
+            
+            // Apply circular clip to the dead/fallen avatar too!
+            ctx.beginPath();
+            ctx.arc(0, 0, avatarSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            
+            ctx.drawImage(selfAvatar, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
+            ctx.restore();
+        } else {
+            // Draw left player (winner) normally
+            drawPlayer(ctx, swordImg, leftX, y, selfAvatar, self, false, avatarSize);
+
+            // Draw right player knocked out (Rotated 90 degrees)
+            ctx.save();
+            ctx.translate(rightX + avatarSize / 2, y + avatarSize / 2);
+            ctx.rotate(Math.PI / 2);
+            
+            // Apply circular clip to the dead/fallen avatar too!
+            ctx.beginPath();
+            ctx.arc(0, 0, avatarSize / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+
+            ctx.drawImage(oppAvatar, -avatarSize / 2, -avatarSize / 2, avatarSize, avatarSize);
             ctx.restore();
         }
+    } else {
+        // Stage 1 (Intro/Standard Turns): Draw both players normally
+        drawPlayer(ctx, swordImg, leftX, y, selfAvatar, self, false, avatarSize);
+        drawPlayer(ctx, swordImg, rightX, y, oppAvatar, opp, true, avatarSize);
     }
 
     return new AttachmentBuilder(canvas.toBuffer("image/png"), {
@@ -87,28 +110,29 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
 function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     const hpWidth = 300;  // Width of the fillable bar area
     const hpHeight = 35;  // Height of the fillable bar area
-    const topY = 40;      // Distance from top edge
+    const topY = 50;      // Distance from top edge
     
-    const selfLeftX = 50;                     // Upper Left Corner for Self
-    const oppLeftX = canvasWidth - 50 - 300;  // Upper Right Corner for Opponent
+    const selfLeftX = 60;                     // Upper Left Corner for Self
+    const oppLeftX = canvasWidth - 60 - 300;  // Upper Right Corner for Opponent
 
     // --- LEFT PLAYER (SELF) HEALTH BAR ---
+    // 1. Draw the texture asset frame background
     ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
-    const selfRatio = Math.max(0, self.hp) / maxSelfHP;
     
-    // Fill with Red Color based on HP percentage
+    // 2. Calculate health ratio and draw red filled drop bar
+    const selfRatio = Math.max(0, self.hp) / maxSelfHP;
     ctx.fillStyle = "#ff3b30"; 
     ctx.fillRect(selfLeftX, topY, selfRatio * hpWidth, hpHeight);
     
-    // Outer Border
+    // 3. Crisp outer line border
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 4;
     ctx.strokeRect(selfLeftX, topY, hpWidth, hpHeight);
     
-    // Text Styling (Username & HP Values)
+    // 4. Texts (Username & Metrics Layout)
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 24px sans-serif";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
     ctx.shadowBlur = 4;
     
     ctx.textAlign = "left";
@@ -116,25 +140,26 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     
     ctx.textAlign = "center";
     ctx.fillText(`${Math.max(0, self.hp)} / ${maxSelfHP}`, selfLeftX + (hpWidth / 2), topY + 26);
-    ctx.shadowBlur = 0; // Reset shadow
+    ctx.shadowBlur = 0; // Reset canvas shadow context
 
     // --- RIGHT PLAYER (OPPONENT) HEALTH BAR ---
+    // 1. Frame assets overlay
     ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
-    const oppRatio = Math.max(0, opp.hp) / maxOppHP;
     
-    // Fill with Red Color based on HP percentage
+    // 2. Decreasing red meter calculation
+    const oppRatio = Math.max(0, opp.hp) / maxOppHP;
     ctx.fillStyle = "#ff3b30";
     ctx.fillRect(oppLeftX, topY, oppRatio * hpWidth, hpHeight);
     
-    // Outer Border
+    // 3. Stroke design layer
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 4;
     ctx.strokeRect(oppLeftX, topY, hpWidth, hpHeight);
     
-    // Text Styling
+    // 4. Metrics display mapping
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 24px sans-serif";
-    ctx.shadowColor = "rgba(0, 0, 0, 0.8)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
     ctx.shadowBlur = 4;
     
     ctx.textAlign = "right";
@@ -142,7 +167,7 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     
     ctx.textAlign = "center";
     ctx.fillText(`${Math.max(0, opp.hp)} / ${maxOppHP}`, oppLeftX + (hpWidth / 2), topY + 26);
-    ctx.shadowBlur = 0; // Reset shadow
+    ctx.shadowBlur = 0; // Reset canvas shadow context
 }
 
 // Handles drawing avatars and weapons during standard frames
