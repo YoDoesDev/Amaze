@@ -1,48 +1,54 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, SlashCommandBuilder } = require('discord.js');
-// Brought back the direct 'db' import for optimized performance
 const { db } = require('../../utils/database.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName("amashleaderboard")
-        .setDescription("Shows the amash leaderboard with server/global toggle"),
+        .setDescription("Shows the amash leaderboard with server/global toggle")
+        .setIntegrationTypes([0, 1]) // Supports both Guild and User installations
+        .setContexts([0, 1, 2]),    // Accessible in Servers, Bot DMs, and Group DMs
+
     category: 'Economy',
     cooldown: 30,
 
     async execute(interaction) {
+        const hasGuild = !!interaction.guild;
+        const authorId = interaction.user.id;
+
         try {
-            // Helper function to process the dataset and generate the ranking lists
-            const generateLB = async (isGlobal) => {
-                // HIGH PERFORMANCE: Let SQLite sort and truncate on disk. Only pulls 100 rows maximum!
-                const allData = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+            // =======================================================
+            // 1. ONE-TIME DISK & NETWORK FETCHING (PRE-COMPILING)
+            // =======================================================
+            const allData = db.prepare(`SELECT userid, bucks FROM amash ORDER BY bucks DESC LIMIT 100`).all();
+
+            // --- Pre-compile Global Text Stream ---
+            const globalRows = allData.slice(0, 10);
+            const globalList = globalRows.length
+                ? globalRows.map((row, idx) => `**${idx + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n')
+                : 'No wealthy users found in this view.';
+
+            // --- Pre-compile Server Text Stream (Safe-guard Context) ---
+            let serverList = 'No wealthy users found in this view.';
+            if (hasGuild) {
+                const topIds = allData.map(r => r.userid);
+                const fetchedMembers = await interaction.guild.members.fetch({ user: topIds }).catch(() => new Map());
                 
-                let data;
-                if (isGlobal) {
-                    data = allData.slice(0, 10);
-                } else {
-                    // Safe Limit Safeguard: Grab the top 100 wealthiest globally to filter for guild matching
-                    const topIds = allData.map(r => r.userid);
-                    
-                    const fetchedMembers = await interaction.guild.members.fetch({ user: topIds }).catch(() => new Map());
-                    const guildMemberIds = Array.from(fetchedMembers.keys());
-                    
-                    data = allData.filter(row => guildMemberIds.includes(row.userid)).slice(0, 10);
+                const serverRows = allData.filter(row => fetchedMembers.has(row.userid)).slice(0, 10);
+                if (serverRows.length) {
+                    serverList = serverRows.map((row, idx) => `**${idx + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`).join('\n');
                 }
+            }
 
-                if (!data || data.length === 0) return 'No wealthy users found in this view.';
-
-                return data.map((row, index) => {
-                    return `**${index + 1}.** <@${row.userid}> — **${row.bucks.toLocaleString()}** Amash`;
-                }).join('\n');
-            };
-
+            // =======================================================
+            // 2. STATELESS RENDER UTILITIES
+            // =======================================================
             const getButtons = (isGlobal) => {
                 return new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId('amash_server')
                         .setLabel('Server')
                         .setStyle(isGlobal ? ButtonStyle.Secondary : ButtonStyle.Primary)
-                        .setDisabled(!isGlobal),
+                        .setDisabled(!isGlobal || !hasGuild), // Disable entirely outside of servers
                     new ButtonBuilder()
                         .setCustomId('amash_global')
                         .setLabel('Global')
@@ -51,41 +57,41 @@ module.exports = {
                 );
             };
 
-            const initialDesc = await generateLB(false);
-            const embed = new EmbedBuilder()
-                .setColor('#5865F2')
-                .setTitle(`💰 ${interaction.guild.name} Wealth Rankings`)
-                .setDescription(initialDesc)
-                .setFooter({ text: `Requested By: ${interaction.user.username}` })
-                .setTimestamp();
+            const renderEmbed = (isGlobal) => {
+                const guildName = hasGuild ? interaction.guild.name : "Server";
+                return new EmbedBuilder()
+                    .setColor(isGlobal ? '#FEE75C' : '#5865F2')
+                    .setTitle(isGlobal ? `🌐 Global Wealth Leaderboard` : `💰 ${guildName} Wealth Rankings`)
+                    .setDescription(isGlobal ? globalList : serverList)
+                    .setFooter({ text: `Requested By: ${interaction.user.username}` })
+                    .setTimestamp();
+            };
 
-            // Use editReply because the interaction is already deferred by index.js
+            // Automatically switch start layouts if context lacks server scope
+            const defaultToGlobal = !hasGuild;
+            
             const response = await interaction.editReply({ 
-                embeds: [embed], 
-                components: [getButtons(false)] 
+                embeds: [renderEmbed(defaultToGlobal)], 
+                components: [getButtons(defaultToGlobal)] 
             });
 
+            // =======================================================
+            // 3. SECURE LOCAL COMPONENT COLLECTOR LOOP
+            // =======================================================
             const collector = response.createMessageComponentCollector({ 
                 componentType: ComponentType.Button, 
                 time: 60000 
             });
 
             collector.on('collect', async i => {
-                if (i.user.id !== interaction.user.id) {
+                if (i.user.id !== authorId) {
                     return i.reply({ content: "This isn't your menu!", ephemeral: true });
                 }
 
                 try {
                     const showGlobal = i.customId === 'amash_global';
-                    const newDesc = await generateLB(showGlobal);
-
-                    const updatedEmbed = EmbedBuilder.from(embed)
-                        .setColor(showGlobal ? '#FEE75C' : '#5865F2')
-                        .setTitle(showGlobal ? `🌐 Global Wealth Leaderboard` : `💰 ${interaction.guild.name} Wealth Rankings`)
-                        .setDescription(newDesc);
-
                     await i.update({ 
-                        embeds: [updatedEmbed], 
+                        embeds: [renderEmbed(showGlobal)], 
                         components: [getButtons(showGlobal)] 
                     });
                 } catch (err) {
@@ -99,7 +105,7 @@ module.exports = {
 
         } catch (error) {
             console.error(">>> [CRITICAL] Amash Leaderboard Error:", error);
-            await interaction.editReply({ content: "The vault is currently locked.", embeds: [], components: [] });
+            await interaction.editReply({ content: "The vault is currently locked due to an unexpected system exception.", embeds: [], components: [] }).catch(() => null);
         }
     }
 };

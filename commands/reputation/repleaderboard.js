@@ -1,56 +1,63 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
-// FIXED: Swapped universalFetchAll for direct high-performance database execution
 const { db } = require('../../utils/database.js');
-const { clearCooldown } = require("../../utils/handlers/cooldowns.js");
 
 module.exports = {
     name: 'repleaderboard',
+    aliases: ['replb', 'repboard', 'rl'],
     category: 'Reputation',
-    aliases: ['replb', 'rl'],
     cooldown: 30,
-    description: 'Toggle between Global and Server rankings.',
+    description: 'View Global or Server-wide reputation rankings',
 
-    async execute(message) {
+    async execute(message, args) {
+        const authorId = message.author.id;
+        const hasGuild = !!message.guild;
+
+        // Since prefix commands aren't deferred by a global framework, send a quick loading placeholder
+        const loadingMessage = await message.reply("Fetching reputation records...").catch(() => null);
+        if (!loadingMessage) return;
+
         try {
             // =======================================================
-            // 1. HIGH-PERFORMANCE DISK EVALUATION (LIMIT 100 MAXIMUM)
+            // 1. DISK DATA CAPTURE & COMPILATION
             // =======================================================
-            // Run a single, indexed query right at the start. Never copies the whole table.
             const top100Rows = db.prepare(`SELECT userid, points FROM reputation ORDER BY points DESC LIMIT 100`).all();
 
-            // --- Global Data Setup (Limit 10) ---
+            // Pre-compile global strings
             const globalRows = top100Rows.slice(0, 10);
             const globalList = globalRows.length 
                 ? globalRows.map((row, i) => `**${i + 1}.** <@${row.userid}> — \`${row.points}\` pts`).join('\n')
                 : "No data available for this view.";
 
-            // --- Server Data Setup ---
-            const potentialIds = top100Rows.map(r => r.userid);
-            
-            // Single API call to screen which of the top 100 global users are in this guild
-            const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
-            
-            let serverRows = [];
-            for (const row of top100Rows) {
-                if (serverRows.length >= 10) break;
-                if (fetchedMembers.has(row.userid)) {
-                    serverRows.push(row);
+            // Pre-compile server strings if executed inside a guild
+            let serverList = "No data available for this view.";
+            if (hasGuild) {
+                const potentialIds = top100Rows.map(r => r.userid);
+                const fetchedMembers = await message.guild.members.fetch({ user: potentialIds, cache: false }).catch(() => new Map());
+                
+                let serverRows = [];
+                for (const row of top100Rows) {
+                    if (serverRows.length >= 10) break;
+                    if (fetchedMembers.has(row.userid)) {
+                        serverRows.push(row);
+                    }
+                }
+
+                if (serverRows.length) {
+                    serverList = serverRows.map((row, i) => `**${i + 1}.** <@${row.userid}> — \`${row.points}\` pts`).join('\n');
                 }
             }
 
-            const serverList = serverRows.length 
-                ? serverRows.map((row, i) => `**${i + 1}.** <@${row.userid}> — \`${row.points}\` pts`).join('\n')
-                : "No data available for this view.";
-
             // =======================================================
-            // 2. HELPER FUNCTION TO GENERATE COLD VIEW STRUCTURES
+            // 2. STATELESS RENDERING ARCHITECTURE
             // =======================================================
-            const createLeaderboard = (isGlobal) => {
+            const generateView = (isGlobal) => {
+                const guildName = hasGuild ? message.guild.name : "Server";
+                
                 const embed = new EmbedBuilder()
                     .setColor(isGlobal ? '#FEE75C' : '#5865F2')
-                    .setTitle(isGlobal ? `🌐 Global Reputation` : `🏆 ${message.guild.name} Rankings`)
+                    .setTitle(isGlobal ? `🌐 Global Reputation` : `🏆 ${guildName} Rankings`)
                     .setDescription(isGlobal ? globalList : serverList)
-                    .setFooter({ text: `Requested by ${message.author.username}` }) // Updated tag syntax
+                    .setFooter({ text: `Requested by ${message.author.username}` })
                     .setTimestamp();
 
                 const buttons = new ActionRowBuilder().addComponents(
@@ -58,7 +65,7 @@ module.exports = {
                         .setCustomId('lb_server')
                         .setLabel('Server')
                         .setStyle(isGlobal ? ButtonStyle.Primary : ButtonStyle.Secondary)
-                        .setDisabled(!isGlobal),
+                        .setDisabled(!isGlobal || !hasGuild),
                     new ButtonBuilder()
                         .setCustomId('lb_global')
                         .setLabel('Global')
@@ -66,47 +73,40 @@ module.exports = {
                         .setDisabled(isGlobal)
                 );
 
-                return { embeds: [embed], components: [buttons] };
+                return { content: null, embeds: [embed], components: [buttons] };
             };
 
-            // Initial Send (Starts on Server View)
-            const response = await message.reply(createLeaderboard(false));
+            const defaultToGlobal = !hasGuild;
+            await loadingMessage.edit(generateView(defaultToGlobal));
 
             // =======================================================
-            // 3. COLLECTOR LOOP (COMPLETELY LOCAL & INSTANTANEOUS)
+            // 3. COLLECTOR LOOP
             // =======================================================
-            const collector = response.createMessageComponentCollector({ 
+            const collector = loadingMessage.createMessageComponentCollector({ 
                 componentType: ComponentType.Button, 
                 time: 60000 
             });
 
             collector.on('collect', async i => {
-                if (i.user.id !== message.author.id) {
-                    return i.reply({ content: "This isn't your menu!", ephemeral: true });
+                if (i.user.id !== authorId) {
+                    return i.reply({ content: "This isn't your menu! Use the command yourself to see rankings.", ephemeral: true });
                 }
 
                 try {
                     const isGlobal = i.customId === 'lb_global';
-                    // Updates instantly in memory without querying the DB again!
-                    await i.update(createLeaderboard(isGlobal));
-
+                    await i.update(generateView(isGlobal));
                 } catch (error) {
-                    console.error("Leaderboard Button Error:", error);
-                    if (!i.replied && !i.deferred) {
-                        await i.reply({ content: "Error updating leaderboard.", ephemeral: true });
-                    }
+                    console.error("Reputation LB Button Error:", error);
                 }
             });
 
-            // Clean up buttons when done
             collector.on('end', () => {
-                response.edit({ components: [] }).catch(() => null);
+                loadingMessage.edit({ components: [] }).catch(() => null);
             });
 
         } catch (error) {
-            console.error(error);
-            clearCooldown(message.author.id, module.exports);
-            message.reply("Leaderboard error.");
+            console.error("Reputation LB Prefix Error:", error);
+            await loadingMessage.edit("An error occurred while processing the rankings dataset.").catch(() => null);
         }
     }
 };
