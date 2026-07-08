@@ -108,71 +108,73 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
 
 // Dedicated function for Top Header Health Status UI
 function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
-    const hpWidth = 300;  // Width of the fillable bar area
-    const hpHeight = 35;  // Height of the fillable bar area
     const topY = 50;      // Distance from top edge
     
-    const selfLeftX = 60;                     // Upper Left Corner for Self
-    const oppLeftX = canvasWidth - 60 - 300;  // Upper Right Corner for Opponent
+    const selfLeftX = 60;                     // Upper Left Corner for Self asset
+    const oppLeftX = canvasWidth - 60 - 300;  // Upper Right Corner for Opponent asset
 
-    // --- LEFT PLAYER (SELF) HEALTH BAR ---
-    // 1. Calculate health ratio safely (clamped between 0 and 1)
+    // --- 1. LEFT PLAYER (SELF) HEALTH BAR ---
+    // Draw the texture asset frame background FIRST so shapes can be layered on top
+    ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, 330, 55);
+
     const selfRatio = Math.max(0, Math.min(1, self.hp / maxSelfHP));
     
-    // 2. Draw red filled bar FIRST (Underneath)
-    ctx.fillStyle = "#ff3b30"; 
-    ctx.fillRect(selfLeftX, topY, selfRatio * hpWidth, hpHeight);
+    // Exact inner coordinates to layer the red bar ON TOP of the black container slot
+    const leftRectX = selfLeftX + 54;   
+    const leftRectWidth = 232;          
+    const leftRectHeight = 20;          
+    const leftRectY = topY + 7;         
+
+    // Draw red fill ON TOP of the asset container
+    if (selfRatio > 0) {
+        ctx.fillStyle = "#ff3b30"; 
+        ctx.fillRect(leftRectX, leftRectY, selfRatio * leftRectWidth, leftRectHeight);
+    }
     
-    // 3. Draw the texture asset frame overlay NEXT (On Top)
-    ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
-    
-    // 4. Crisp outer line border frame
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(selfLeftX, topY, hpWidth, hpHeight);
-    
-    // 5. Texts (Username & Metrics Layout)
+    // Left Text Layout
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 24px sans-serif";
+    ctx.font = "bold 20px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
     ctx.shadowBlur = 4;
     
     ctx.textAlign = "left";
     ctx.fillText(self.user.username, selfLeftX, topY - 15);
     
-    ctx.textAlign = "center";
-    ctx.fillText(`${Math.max(0, self.hp)} / ${maxSelfHP}`, selfLeftX + (hpWidth / 2), topY + 26);
-    ctx.shadowBlur = 0; // Reset canvas shadow context
+    ctx.textAlign = "center"; 
+    ctx.fillText(`${Math.max(0, self.hp)}`, leftRectX + (leftRectWidth / 2), leftRectY + 16);
+    ctx.shadowBlur = 0; 
 
 
-    // --- RIGHT PLAYER (OPPONENT) HEALTH BAR ---
-    // 1. Calculate health ratio safely (clamped between 0 and 1)
+    // --- 2. RIGHT PLAYER (OPPONENT) HEALTH BAR ---
+    // Draw the texture asset frame background FIRST
+    ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, 330, 55);
+
     const oppRatio = Math.max(0, Math.min(1, opp.hp / maxOppHP));
     
-    // 2. Draw red filled bar FIRST (Underneath)
-    ctx.fillStyle = "#ff3b30";
-    ctx.fillRect(oppLeftX, topY, oppRatio * hpWidth, hpHeight);
+    // Exact inner coordinates to layer the red bar ON TOP of the black container slot
+    const rightRectX = oppLeftX + 54;   
+    const rightRectWidth = 232;         
+    const rightRectHeight = 20;
+    const rightRectY = topY + 7;
+
+    // Draw red fill ON TOP of the asset container
+    if (oppRatio > 0) {
+        ctx.fillStyle = "#ff3b30";
+        ctx.fillRect(rightRectX, rightRectY, oppRatio * rightRectWidth, rightRectHeight);
+    }
     
-    // 3. Draw the texture asset frame overlay NEXT (On Top)
-    ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
-    
-    // 4. Stroke design layer frame
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 4;
-    ctx.strokeRect(oppLeftX, topY, hpWidth, hpHeight);
-    
-    // 5. Metrics display mapping
+    // Right Text Layout
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 24px sans-serif";
+    ctx.font = "bold 20px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
     ctx.shadowBlur = 4;
     
     ctx.textAlign = "right";
-    ctx.fillText(opp.user.username, oppLeftX + hpWidth, topY - 15);
+    ctx.fillText(opp.user.username, oppLeftX + 300, topY - 15);
     
     ctx.textAlign = "center";
-    ctx.fillText(`${Math.max(0, opp.hp)} / ${maxOppHP}`, oppLeftX + (hpWidth / 2), topY + 26);
-    ctx.shadowBlur = 0; // Reset canvas shadow context
+    ctx.fillText(`${Math.max(0, opp.hp)}`, rightRectX + (rightRectWidth / 2), rightRectY + 16);
+    ctx.shadowBlur = 0; 
 }
 
 // Handles drawing avatars and weapons during standard frames
