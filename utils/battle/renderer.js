@@ -124,71 +124,79 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth, s
     const leftRectX = selfLeftX + 54;   
     const rightRectX = oppLeftX + 54;
 
-    // --- DETERMINE RATIOS BASED ON STAGE ---
+    // --- DETERMINE RATIOS AND DISPLAY VALUES BASED ON STAGE ---
     let selfRatio, oppRatio;
+    let displaySelfHp, displayOppHp;
 
     if (stage === 2) {
-        // Mid-fight: Hardcode a dramatic mid-health snapshot percentage (e.g., 45% vs 60%)
+        // Mid-fight animation snapshot percentages
         selfRatio = 0.45;
         oppRatio = 0.60;
+        displaySelfHp = Math.round(safeMaxSelf * 0.45);
+        displayOppHp = Math.round(safeMaxOpp * 0.60);
     } else if (stage === 3) {
-        // Result phase: Detect the absolute real winner and loser state explicitly
+        // Result phase check
         selfRatio = self.hp <= 0 ? 0 : 1.0;
         oppRatio = self.hp <= 0 ? 1.0 : 0;
+        displaySelfHp = self.hp <= 0 ? 0 : safeMaxSelf;
+        displayOppHp = self.hp <= 0 ? safeMaxOpp : 0;
     } else {
-        // Stage 1 / Standard fallback: Dynamic math using real stats
+        // Standard combat frames
         selfRatio = Math.max(0, Math.min(1, self.hp / safeMaxSelf));
         oppRatio = Math.max(0, Math.min(1, opp.hp / safeMaxOpp));
+        displaySelfHp = Math.max(0, self.hp);
+        displayOppHp = Math.max(0, opp.hp);
     }
 
     // --- 1. LEFT PLAYER (SELF) HEALTH BAR ---
-    // Frame asset goes first
+    // Draw frame asset first
     ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, 330, 55);
 
-    // Forced direct size fill over the black area
+    // Layer red fill over the empty track slot
     if (selfRatio > 0) {
         ctx.fillStyle = "#ff3b30"; 
         ctx.fillRect(leftRectX, rectY, selfRatio * rectWidth, rectHeight);
     }
     
-    // Left Texts
+    // Configure text styling
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 20px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
     ctx.shadowBlur = 4;
     
+    // Draw Username
     ctx.textAlign = "left";
     ctx.fillText(self.user.username, selfLeftX, topY - 15);
     
+    // Clean formatted HP text overlay with explicit divider slash
     ctx.textAlign = "center"; 
-    // Show static text mockups during Stage 2 vs actual value tracking
-    const displaySelfHp = stage === 2 ? Math.round(safeMaxSelf * 0.45) : Math.max(0, self.hp);
     ctx.fillText(`${displaySelfHp} / ${safeMaxSelf}`, leftRectX + (rectWidth / 2), rectY + 16);
     ctx.shadowBlur = 0; 
 
 
     // --- 2. RIGHT PLAYER (OPPONENT) HEALTH BAR ---
-    // Frame asset goes first
+    // Draw frame asset first
     ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, 330, 55);
 
-    // Forced direct size fill over the black area
+    // Layer red fill over the empty track slot
     if (oppRatio > 0) {
         ctx.fillStyle = "#ff3b30";
         ctx.fillRect(rightRectX, rectY, oppRatio * rectWidth, rectHeight);
     }
     
-    // Right Texts
+    // Restore text styling for right side
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 20px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
     ctx.shadowBlur = 4;
     
+    // Draw Username
     ctx.textAlign = "right";
     ctx.fillText(opp.user.username, oppLeftX + 300, topY - 15);
     
+    // Clean formatted HP text overlay with explicit divider slash
     ctx.textAlign = "center";
-    const displayOppHp = stage === 2 ? Math.round(safeMaxOpp * 0.60) : (self.hp <= 0 ? safeMaxOpp : 0);
-    ctx.fillText(`${stage === 3 ? (self.hp <= 0 ? safeMaxOpp : 0) : displayOppHp} / ${safeMaxOpp}`, rightRectX + (rectWidth / 2), rectY + 16);
+    ctx.fillText(`${displayOppHp} / ${safeMaxOpp}`, rightRectX + (rectWidth / 2), rectY + 16);
     ctx.shadowBlur = 0; 
 }
 
