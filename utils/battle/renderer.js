@@ -116,20 +116,22 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     const oppLeftX = canvasWidth - 60 - 300;  // Upper Right Corner for Opponent
 
     // --- LEFT PLAYER (SELF) HEALTH BAR ---
-    // 1. Draw the texture asset frame background
-    ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
+    // 1. Calculate health ratio safely (clamped between 0 and 1)
+    const selfRatio = Math.max(0, Math.min(1, self.hp / maxSelfHP));
     
-    // 2. Calculate health ratio and draw red filled drop bar
-    const selfRatio = Math.max(0, self.hp) / maxSelfHP;
+    // 2. Draw red filled bar FIRST (Underneath)
     ctx.fillStyle = "#ff3b30"; 
     ctx.fillRect(selfLeftX, topY, selfRatio * hpWidth, hpHeight);
     
-    // 3. Crisp outer line border
+    // 3. Draw the texture asset frame overlay NEXT (On Top)
+    ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
+    
+    // 4. Crisp outer line border frame
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 4;
     ctx.strokeRect(selfLeftX, topY, hpWidth, hpHeight);
     
-    // 4. Texts (Username & Metrics Layout)
+    // 5. Texts (Username & Metrics Layout)
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 24px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
@@ -142,21 +144,24 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     ctx.fillText(`${Math.max(0, self.hp)} / ${maxSelfHP}`, selfLeftX + (hpWidth / 2), topY + 26);
     ctx.shadowBlur = 0; // Reset canvas shadow context
 
+
     // --- RIGHT PLAYER (OPPONENT) HEALTH BAR ---
-    // 1. Frame assets overlay
-    ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
+    // 1. Calculate health ratio safely (clamped between 0 and 1)
+    const oppRatio = Math.max(0, Math.min(1, opp.hp / maxOppHP));
     
-    // 2. Decreasing red meter calculation
-    const oppRatio = Math.max(0, opp.hp) / maxOppHP;
+    // 2. Draw red filled bar FIRST (Underneath)
     ctx.fillStyle = "#ff3b30";
     ctx.fillRect(oppLeftX, topY, oppRatio * hpWidth, hpHeight);
     
-    // 3. Stroke design layer
+    // 3. Draw the texture asset frame overlay NEXT (On Top)
+    ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, hpWidth + 30, hpHeight + 20);
+    
+    // 4. Stroke design layer frame
     ctx.strokeStyle = "#000000";
     ctx.lineWidth = 4;
     ctx.strokeRect(oppLeftX, topY, hpWidth, hpHeight);
     
-    // 4. Metrics display mapping
+    // 5. Metrics display mapping
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 24px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
