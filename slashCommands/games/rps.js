@@ -6,11 +6,10 @@ const {
   EmbedBuilder, 
   ComponentType 
 } = require('discord.js');
-const { emojis } = require('../../utils/config.js'); // Assuming this is present in your local directories
+
 const ongGames = new Map();
 
 module.exports = {
-  // Update the data mapping setup for User-Installable Context frameworks
   data: new SlashCommandBuilder()
     .setName("rps")
     .setDescription("Play rock paper scissors with friends or a bot.")
@@ -24,7 +23,6 @@ module.exports = {
         .setDescription("The user you want to duel (leave blank to play against the bot)")
         .setRequired(false)
     )
-    // Essential flags to make this work anywhere as a user command setup
     .setIntegrationTypes([0, 1]) // 0 = Guild Install, 1 = User Install
     .setContexts([0, 1, 2]),    // 0 = Guilds, 1 = Bot DMs, 2 = Group DMs / External Guilds
 
@@ -32,9 +30,7 @@ module.exports = {
   cooldown: 10,
 
   async execute(interaction) {
-    // Graceful fallback to interaction.channelId since interaction.channel can be null in User App installations
     const channelId = interaction.channelId || interaction.user.id;
-    
     const totalRounds = interaction.options.getInteger("rounds");
     const targetUser = interaction.options.getUser("opponent");
 
@@ -65,8 +61,6 @@ module.exports = {
       oppChoice: "TBD",
       selfW: 0,
       oppW: 0,
-      selfAfk: 0,
-      oppAfk: 0,
       expiresAt: 120000 // 2 minutes
     };
 
@@ -109,7 +103,8 @@ module.exports = {
       });
 
       try {
-        const acceptInteraction = await askMessage.awaitMessageComponent({
+        const acceptInteraction = await interaction.webhook.awaitMessageComponent({
+          message: askMessage.id,
           filter: i => i.user.id === targetUser.id,
           time: game.expiresAt
         });
@@ -118,13 +113,13 @@ module.exports = {
 
         if (acceptInteraction.customId === "decline") {
           ongGames.delete(channelId);
-          return interaction.editReply({ content: "Challenge declined!", embeds: [], components: [] });
+          return interaction.webhook.editMessage(askMessage.id, { content: "Challenge declined!", embeds: [], components: [] });
         }
 
         game.isAccepted = true;
       } catch (err) {
         ongGames.delete(channelId);
-        return interaction.editReply({ content: "⌛ Match timed out!", embeds: [], components: [] });
+        return interaction.webhook.editMessage(askMessage.id, { content: "⌛ Match timed out!", embeds: [], components: [] });
       }
     } else {
       await interaction.editReply({ content: "🤖 Starting a match against Amaze Bot..." }).catch(() => null);
@@ -134,13 +129,12 @@ module.exports = {
     // =======================================================
     // PHASE 2: RUNTIME MULTI-ROUND GAME ENGINE
     // =======================================================
-    // Instead of deleting/sending new channel messages, we continuously use editReply
-    runGameEngine(interaction, game);
+    runGameEngine(interaction, game, null);
   }
 };
 
 // --- CORE GAME ENGINE LOOP ---
-async function runGameEngine(interaction, game) {
+async function runGameEngine(interaction, game, targetMessageId = null) {
   const weapons = ['rock', 'paper', 'scissors'];
   const winConditions = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
 
@@ -166,14 +160,22 @@ async function runGameEngine(interaction, game) {
       .setTimestamp();
   };
 
-  // Safe approach for User Apps: We modify our interaction token directly
-  const gameMessage = await interaction.editReply({
-    content: "",
-    embeds: [renderStatusEmbed()],
-    components: [weaponRow]
-  });
+  let gameMessage;
+  if (!targetMessageId) {
+    gameMessage = await interaction.editReply({
+      content: "",
+      embeds: [renderStatusEmbed()],
+      components: [weaponRow]
+    });
+  } else {
+    gameMessage = await interaction.webhook.editMessage(targetMessageId, {
+      embeds: [renderStatusEmbed()],
+      components: [weaponRow]
+    });
+  }
 
-  const collector = gameMessage.createMessageComponentCollector({
+  const collector = interaction.webhook.createMessageComponentCollector({
+    message: gameMessage.id,
     componentType: ComponentType.Button,
     time: 60000 
   });
@@ -190,29 +192,37 @@ async function runGameEngine(interaction, game) {
     if (clickerId === game.selfId) {
       if (game.selfChoice !== 'TBD') return i.reply({ content: "Move already declared!", ephemeral: true });
       game.selfChoice = selectedWeapon;
-      await i.reply({ content: `You locked in **${selectedWeapon.toUpperCase()}**!`, ephemeral: true });
     } 
     else if (clickerId === game.oppId) {
       if (game.oppChoice !== 'TBD') return i.reply({ content: "Move already declared!", ephemeral: true });
       game.oppChoice = selectedWeapon;
-      await i.reply({ content: `You locked in **${selectedWeapon.toUpperCase()}**!`, ephemeral: true });
     }
 
     if (game.oppId === 'bot') {
       game.oppChoice = weapons[Math.floor(Math.random() * weapons.length)];
     }
 
-    await interaction.editReply({ embeds: [renderStatusEmbed()] }).catch(() => null);
-
+    // Both players have locked in choices
     if (game.selfChoice !== 'TBD' && game.oppChoice !== 'TBD') {
-      collector.stop('round_complete');
+      try {
+        await i.deferUpdate();
+      } catch {}
+      return collector.stop('round_complete');
+    }
+
+    // Only one player has made a choice so far
+    try {
+      await i.reply({ content: `You locked in **${selectedWeapon.toUpperCase()}**!`, ephemeral: true });
+      await interaction.webhook.editMessage(gameMessage.id, { embeds: [renderStatusEmbed()] });
+    } catch (err) {
+      null; 
     }
   });
 
   collector.on('end', async (_, reason) => {
     if (reason !== 'round_complete') {
       ongGames.delete(game.channel);
-      return interaction.editReply({ content: "🛑 Match canceled due to round selection inactivity.", embeds: [], components: [] }).catch(() => null);
+      return interaction.webhook.editMessage(gameMessage.id, { content: "🛑 Match canceled due to round selection inactivity.", embeds: [], components: [] }).catch(() => null);
     }
 
     let roundResult = "";
@@ -235,7 +245,7 @@ async function runGameEngine(interaction, game) {
       .setDescription(`${roundResult}\n\n🏆 **Current Match Standings:**\n• ${game.self}: **${game.selfW}**\n• ${game.opp}: **${game.oppW}**`)
       .setTimestamp();
 
-    await interaction.editReply({ embeds: [intermediateEmbed], components: [] }).catch(() => null);
+    await interaction.webhook.editMessage(gameMessage.id, { embeds: [intermediateEmbed], components: [] }).catch(() => null);
 
     setTimeout(async () => {
       game.crntRound++;
@@ -252,10 +262,9 @@ async function runGameEngine(interaction, game) {
           .setTimestamp();
 
         ongGames.delete(game.channel);
-        return interaction.editReply({ embeds: [finalEmbed], components: [] }).catch(() => null);
+        return interaction.webhook.editMessage(gameMessage.id, { embeds: [finalEmbed], components: [] }).catch(() => null);
       } else {
-        // Continuous looping on the interaction token ensures it works outside your native guilds!
-        runGameEngine(interaction, game);
+        runGameEngine(interaction, game, gameMessage.id);
       }
     }, 3500);
   });
