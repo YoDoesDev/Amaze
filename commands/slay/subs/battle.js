@@ -20,7 +20,11 @@ module.exports = {
         if (!char) return message.reply("You don't have a character setup yet.");
         if (!char2) return message.reply("The mentioned user doesn't have a character setup.");
 
-        const ask = new EmbedBuilder().setTitle("Battle Request").setDescription(`${message.author.username} has challenged ${opponentUser.username}!`);
+        const ask = new EmbedBuilder()
+            .setTitle("Battle Challenge")
+            .setDescription(`${message.author.id} has challenged ${opponentUser.id} to a battle!`)
+            .setColor(0xFF0000)
+            .setFooter({ text: "You have 30 seconds to accept or decline." });
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("accept").setLabel("Accept").setStyle(ButtonStyle.Success),
             new ButtonBuilder().setCustomId("decline").setLabel("Decline").setStyle(ButtonStyle.Danger)
