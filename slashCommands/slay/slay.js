@@ -25,9 +25,9 @@ if (fs.existsSync(subsPath)) {
                     .setName(rawData.name)
                     .setDescription(rawData.description);
                 
-                // If your subfile has options (like strings, integers, etc.), carry them over
+                // If your subfile has options, spread them cleanly into the internal API layout
                 if (rawData.options) {
-                    sub.options = rawData.options;
+                    sub.options = [...rawData.options];
                 }
                 
                 return sub;
