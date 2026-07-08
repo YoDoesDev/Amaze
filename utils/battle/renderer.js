@@ -44,8 +44,8 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
     // 1. Draw the Background Arena
     ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
-    // 2. Global UI: Render Upper Corner RED Health Bars
-    drawTopUI(ctx, hpBar, self, opp, maxSelfHP, maxOppHP, canvas.width);
+    // 2. Global UI: Render Upper Corner RED Health Bars (Passing stage down)
+    drawTopUI(ctx, hpBar, self, opp, maxSelfHP, maxOppHP, canvas.width, stage);
 
     const leftX = 220;
     const rightX = 860;
@@ -107,31 +107,51 @@ async function render(self, opp, stage, maxSelfHP, maxOppHP) {
 }
 
 // Dedicated function for Top Header Health Status UI
-function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
+function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth, stage) {
     const topY = 50;      // Distance from top edge
     
     const selfLeftX = 60;                     // Upper Left Corner for Self asset
     const oppLeftX = canvasWidth - 60 - 300;  // Upper Right Corner for Opponent asset
 
+    // --- DEFENSIVE SAFEGUARDS AGAINST NaN ---
+    const safeMaxSelf = maxSelfHP || self.maxHp || self.maxHP || self.max_hp || self.hp || 1000;
+    const safeMaxOpp = maxOppHP || opp.maxHp || opp.maxHP || opp.max_hp || opp.hp || 1000;
+
+    // --- HARDCODED PRECISE BOX SIZES ---
+    const rectWidth = 232;          
+    const rectHeight = 20;          
+    const rectY = topY + 7;         
+    const leftRectX = selfLeftX + 54;   
+    const rightRectX = oppLeftX + 54;
+
+    // --- DETERMINE RATIOS BASED ON STAGE ---
+    let selfRatio, oppRatio;
+
+    if (stage === 2) {
+        // Mid-fight: Hardcode a dramatic mid-health snapshot percentage (e.g., 45% vs 60%)
+        selfRatio = 0.45;
+        oppRatio = 0.60;
+    } else if (stage === 3) {
+        // Result phase: Detect the absolute real winner and loser state explicitly
+        selfRatio = self.hp <= 0 ? 0 : 1.0;
+        oppRatio = self.hp <= 0 ? 1.0 : 0;
+    } else {
+        // Stage 1 / Standard fallback: Dynamic math using real stats
+        selfRatio = Math.max(0, Math.min(1, self.hp / safeMaxSelf));
+        oppRatio = Math.max(0, Math.min(1, opp.hp / safeMaxOpp));
+    }
+
     // --- 1. LEFT PLAYER (SELF) HEALTH BAR ---
-    // Draw the texture asset frame background FIRST so shapes can be layered on top
+    // Frame asset goes first
     ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, 330, 55);
 
-    const selfRatio = Math.max(0, Math.min(1, self.hp / maxSelfHP));
-    
-    // Exact inner coordinates to layer the red bar ON TOP of the black container slot
-    const leftRectX = selfLeftX + 54;   
-    const leftRectWidth = 232;          
-    const leftRectHeight = 20;          
-    const leftRectY = topY + 7;         
-
-    // Draw red fill ON TOP of the asset container
+    // Forced direct size fill over the black area
     if (selfRatio > 0) {
         ctx.fillStyle = "#ff3b30"; 
-        ctx.fillRect(leftRectX, leftRectY, selfRatio * leftRectWidth, leftRectHeight);
+        ctx.fillRect(leftRectX, rectY, selfRatio * rectWidth, rectHeight);
     }
     
-    // Left Text Layout
+    // Left Texts
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 20px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
@@ -141,29 +161,23 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     ctx.fillText(self.user.username, selfLeftX, topY - 15);
     
     ctx.textAlign = "center"; 
-    ctx.fillText(`${Math.max(0, self.hp)}`, leftRectX + (leftRectWidth / 2), leftRectY + 16);
+    // Show static text mockups during Stage 2 vs actual value tracking
+    const displaySelfHp = stage === 2 ? Math.round(safeMaxSelf * 0.45) : Math.max(0, self.hp);
+    ctx.fillText(`${displaySelfHp} / ${safeMaxSelf}`, leftRectX + (rectWidth / 2), rectY + 16);
     ctx.shadowBlur = 0; 
 
 
     // --- 2. RIGHT PLAYER (OPPONENT) HEALTH BAR ---
-    // Draw the texture asset frame background FIRST
+    // Frame asset goes first
     ctx.drawImage(hpBarImg, oppLeftX - 15, topY - 10, 330, 55);
 
-    const oppRatio = Math.max(0, Math.min(1, opp.hp / maxOppHP));
-    
-    // Exact inner coordinates to layer the red bar ON TOP of the black container slot
-    const rightRectX = oppLeftX + 54;   
-    const rightRectWidth = 232;         
-    const rightRectHeight = 20;
-    const rightRectY = topY + 7;
-
-    // Draw red fill ON TOP of the asset container
+    // Forced direct size fill over the black area
     if (oppRatio > 0) {
         ctx.fillStyle = "#ff3b30";
-        ctx.fillRect(rightRectX, rightRectY, oppRatio * rightRectWidth, rightRectHeight);
+        ctx.fillRect(rightRectX, rectY, oppRatio * rectWidth, rectHeight);
     }
     
-    // Right Text Layout
+    // Right Texts
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 20px sans-serif";
     ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
@@ -173,13 +187,13 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth) {
     ctx.fillText(opp.user.username, oppLeftX + 300, topY - 15);
     
     ctx.textAlign = "center";
-    ctx.fillText(`${Math.max(0, opp.hp)}`, rightRectX + (rightRectWidth / 2), rightRectY + 16);
+    const displayOppHp = stage === 2 ? Math.round(safeMaxOpp * 0.60) : (self.hp <= 0 ? safeMaxOpp : 0);
+    ctx.fillText(`${stage === 3 ? (self.hp <= 0 ? safeMaxOpp : 0) : displayOppHp} / ${safeMaxOpp}`, rightRectX + (rectWidth / 2), rectY + 16);
     ctx.shadowBlur = 0; 
 }
 
 // Handles drawing avatars and weapons during standard frames
 function drawPlayer(ctx, swordImg, x, y, avatar, player, flipSword, avatarSize) {
-    // Render Avatar with Isolated Circular Clipping Mask
     ctx.save(); 
     ctx.beginPath();
     ctx.arc(x + avatarSize / 2, y + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
@@ -188,7 +202,6 @@ function drawPlayer(ctx, swordImg, x, y, avatar, player, flipSword, avatarSize) 
     ctx.drawImage(avatar, x, y, avatarSize, avatarSize);
     ctx.restore(); 
 
-    // Render Weapon Elements
     ctx.save();
     if (flipSword) {
         ctx.translate(x + 165, y + 165);
