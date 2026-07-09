@@ -53,7 +53,7 @@ while (!isBattleOver.result) {
         const loopEmbed = new EmbedBuilder()
             .setTitle(`Battle in Progress...`)
             .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
-            .setImage(`attachment://battle.png?v=${turns}`) // Appending a query param drops the cache frame
+            .setImage(`attachment://battle_${turns}.png`) // Appending a query param drops the cache frame
             .setColor("#006eff")
             .setTimestamp(); // Changing timestamps forces an layout state recalculation
 
