@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { universalGet } = require("../utils/database.js");
+const { universalGet } = require("../.
+./../utils/database.js");
 const { runBattleContext } = require("../utils/battle/engine.js");
 
 const games = new Map();
