@@ -24,46 +24,51 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         let lastImage, progression;
 
         // Render Start
+        let dynamicName = `battleStart.png`;
         const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
         const firstEmbed = new EmbedBuilder()
             .setDescription("The battle begins!")
-            .setImage("attachment://battle.png")
+            .setImage("attachment://battleStart.png")
             .setColor("#006eff");
 
-        let battleMessage = await sendInitial({ embeds: [firstEmbed], files: [firstImage] });
+        // FIX: Wrapped the attachment parameters inside curly brackets {}
+        let battleMessage = await sendInitial({ 
+            embeds: [firstEmbed], 
+            files: [{ attachment: firstImage, name: dynamicName }] 
+        });
 
         // Combat Engine Loop
-while (!isBattleOver.result) {
-    isBattleOver = takeTurn(game.self, game.opp);
-    turns++;
+        while (!isBattleOver.result) {
+            isBattleOver = takeTurn(game.self, game.opp);
+            turns++;
 
-    if (isBattleOver.result) {
-        await wait(400);
-        // Add a cache-busting property name to the final asset if needed
-        lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
-        break;
-    }
+            if (isBattleOver.result) {
+                await wait(400);
+                lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
+                dynamicName = `battleEnds.png`;
+                break;
+            }
 
-    // Keep your smart rate-limit gate (only update every 4 turns)
-    if (turns % 4 === 0) {
-        await wait(400);
-        progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
+            // Keep your smart rate-limit gate (only update every 4 turns)
+            if (turns % 4 === 0) {
+                await wait(400);
+                progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
+                dynamicName = `battle_${turns}.png`;
+                
+                const loopEmbed = new EmbedBuilder()
+                    .setTitle(`Battle in Progress...`)
+                    .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
+                    .setImage(`attachment://battle_${turns}.png`)
+                    .setColor("#006eff")
+                    .setTimestamp();
 
-        // FIX: Force a change in the Embed's construction fields to invalidate Discord's CDN cache
-        const loopEmbed = new EmbedBuilder()
-            .setTitle(`Battle in Progress...`)
-            .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
-            .setImage(`attachment://battle_${turns}.png`) // Appending a query param drops the cache frame
-            .setColor("#006eff")
-            .setTimestamp(); // Changing timestamps forces an layout state recalculation
-
-        await updateMessage(battleMessage, { 
-            embeds: [loopEmbed], 
-            files: [progression] 
-        });
-    }
-}
-
+                // FIX: Wrapped the attachment parameters inside curly brackets {}
+                await updateMessage(battleMessage, { 
+                    embeds: [loopEmbed], 
+                    files: [{ attachment: progression, name: dynamicName }] 
+                });
+            }
+        }
 
         // Processing Results
         const winner = isBattleOver.winner;
@@ -76,9 +81,13 @@ while (!isBattleOver.result) {
             .setColor("#bcdf1f")
             .setTitle("Battle Result")
             .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
-            .setImage("attachment://battle.png");
+            .setImage("attachment://battleEnds.png");
 
-        await updateMessage(battleMessage, { embeds: [resultEmbed], files: [lastImage] });
+        // FIX: Wrapped the attachment parameters inside curly brackets {}
+        await updateMessage(battleMessage, { 
+            embeds: [resultEmbed], 
+            files: [{ attachment: lastImage, name: dynamicName }] 
+        });
 
         await checkXP(winner.user.id);
         await checkXP(loser.user.id);
