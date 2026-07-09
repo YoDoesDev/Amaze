@@ -22,8 +22,8 @@ module.exports = {
 
         const ask = new EmbedBuilder()
             .setTitle("Battle Challenge")
-            .setDescription(`${message.author.id} has challenged ${opponentUser.id} to a battle!`)
-            .setColor(0xFF0000)
+            .setDescription(`<@${message.author.id}> has challenged <@${opponentUser.id}> to a battle!`)
+            .setColor("#ff6644")
             .setFooter({ text: "You have 30 seconds to accept or decline." });
         const row = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId("accept").setLabel("Accept").setStyle(ButtonStyle.Success),
