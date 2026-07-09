@@ -1,4 +1,3 @@
-// FIX: Import AttachmentBuilder alongside EmbedBuilder
 const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const { render } = require("./renderer.js");
 const { takeTurn } = require("./actions.js");
@@ -24,16 +23,13 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         let isBattleOver = { result: false };
         let lastImage, progression;
 
-        // Render Start
-        let dynamicName = `battleStart.png`;
+        // Render Start Frame
         const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
-
-        // FIX: Wrap the buffer securely using AttachmentBuilder
-        const firstAttachment = new AttachmentBuilder(firstImage, { name: dynamicName });
+        const firstAttachment = new AttachmentBuilder(firstImage, { name: "battleStart.png" });
 
         const firstEmbed = new EmbedBuilder()
             .setDescription("The battle begins!")
-            .setImage(`attachment://${dynamicName}`)
+            .setImage("attachment://battleStart.png")
             .setColor("#006eff");
 
         let battleMessage = await sendInitial({ embeds: [firstEmbed], files: [firstAttachment] });
@@ -46,23 +42,21 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
             if (isBattleOver.result) {
                 await wait(400);
                 lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
-                dynamicName = `battleEnds.png`;
                 break;
             }
 
-            // Keep your smart rate-limit gate (only update every 4 turns)
+            // Smart rate-limit gate (only update visually every 4 turns)
             if (turns % 4 === 0) {
                 await wait(400);
                 progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
-                dynamicName = `battle_${turns}.png`;
-
-                // FIX: Wrap inside AttachmentBuilder
-                const loopAttachment = new AttachmentBuilder(progression, { name: dynamicName });
+                
+                const turnImgName = `battle_turn_${turns}.png`;
+                const loopAttachment = new AttachmentBuilder(progression, { name: turnImgName });
 
                 const loopEmbed = new EmbedBuilder()
                     .setTitle(`Battle in Progress...`)
                     .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
-                    .setImage(`attachment://${dynamicName}`)
+                    .setImage(`attachment://${turnImgName}`)
                     .setColor("#006eff")
                     .setTimestamp();
 
@@ -80,14 +74,14 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         universalSet("characters", winner.user.id, { xp: winner.xp });
         universalSet("characters", loser.user.id, { xp: loser.xp });
 
-        // FIX: Wrap the final output frame inside AttachmentBuilder
-        const finalAttachment = new AttachmentBuilder(lastImage, { name: dynamicName });
+        // FIX: Explicitly insulate file metadata resolution variables inside isolated objects
+        const finalAttachment = new AttachmentBuilder(lastImage, { name: "battleEnds.png" });
 
         const resultEmbed = new EmbedBuilder()
             .setColor("#bcdf1f")
             .setTitle("Battle Result")
             .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
-            .setImage(`attachment://${dynamicName}`);
+            .setImage("attachment://battleEnds.png");
 
         await updateMessage(battleMessage, { embeds: [resultEmbed], files: [finalAttachment] });
 
