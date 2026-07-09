@@ -1,4 +1,5 @@
-const { EmbedBuilder } = require("discord.js");
+// FIX: Import AttachmentBuilder alongside EmbedBuilder
+const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
 const { render } = require("./renderer.js");
 const { takeTurn } = require("./actions.js");
 const { universalSet } = require("../database.js");
@@ -26,16 +27,16 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         // Render Start
         let dynamicName = `battleStart.png`;
         const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
+
+        // FIX: Wrap the buffer securely using AttachmentBuilder
+        const firstAttachment = new AttachmentBuilder(firstImage, { name: dynamicName });
+
         const firstEmbed = new EmbedBuilder()
             .setDescription("The battle begins!")
-            .setImage("attachment://battleStart.png")
+            .setImage(`attachment://${dynamicName}`)
             .setColor("#006eff");
 
-        // FIX: Wrapped the attachment parameters inside curly brackets {}
-        let battleMessage = await sendInitial({ 
-            embeds: [firstEmbed], 
-            files: [{ attachment: firstImage, name: dynamicName }] 
-        });
+        let battleMessage = await sendInitial({ embeds: [firstEmbed], files: [firstAttachment] });
 
         // Combat Engine Loop
         while (!isBattleOver.result) {
@@ -54,18 +55,20 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
                 await wait(400);
                 progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
                 dynamicName = `battle_${turns}.png`;
-                
+
+                // FIX: Wrap inside AttachmentBuilder
+                const loopAttachment = new AttachmentBuilder(progression, { name: dynamicName });
+
                 const loopEmbed = new EmbedBuilder()
                     .setTitle(`Battle in Progress...`)
                     .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
-                    .setImage(`attachment://battle_${turns}.png`)
+                    .setImage(`attachment://${dynamicName}`)
                     .setColor("#006eff")
                     .setTimestamp();
 
-                // FIX: Wrapped the attachment parameters inside curly brackets {}
                 await updateMessage(battleMessage, { 
                     embeds: [loopEmbed], 
-                    files: [{ attachment: progression, name: dynamicName }] 
+                    files: [loopAttachment] 
                 });
             }
         }
@@ -77,17 +80,16 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         universalSet("characters", winner.user.id, { xp: winner.xp });
         universalSet("characters", loser.user.id, { xp: loser.xp });
 
+        // FIX: Wrap the final output frame inside AttachmentBuilder
+        const finalAttachment = new AttachmentBuilder(lastImage, { name: dynamicName });
+
         const resultEmbed = new EmbedBuilder()
             .setColor("#bcdf1f")
             .setTitle("Battle Result")
             .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
-            .setImage("attachment://battleEnds.png");
+            .setImage(`attachment://${dynamicName}`);
 
-        // FIX: Wrapped the attachment parameters inside curly brackets {}
-        await updateMessage(battleMessage, { 
-            embeds: [resultEmbed], 
-            files: [{ attachment: lastImage, name: dynamicName }] 
-        });
+        await updateMessage(battleMessage, { embeds: [resultEmbed], files: [finalAttachment] });
 
         await checkXP(winner.user.id);
         await checkXP(loser.user.id);
