@@ -47,7 +47,7 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
             }
 
             // Smart rate-limit gate (only update visually every 4 turns)
-            if (turns % 4 === 0) {
+            if (turns % 6 === 0) {
                 await wait(400);
                 progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
                 
