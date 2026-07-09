@@ -1,4 +1,4 @@
-const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const { render } = require("./renderer.js");
 const { takeTurn } = require("./actions.js");
 const { universalSet } = require("../database.js");
@@ -24,10 +24,8 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         let lastImage, progression;
 
         // Render Start Frame
-        const firstImageRaw = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
-        // FIX: Ensure we use Buffer.from() to cast the stream explicitly to prevent engine resolution failure
-        const firstImage = Buffer.isBuffer(firstImageRaw) ? firstImageRaw : Buffer.from(firstImageRaw);
-        const firstAttachment = new AttachmentBuilder(firstImage, { name: "battleStart.png" });
+        const firstAttachment = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
+        firstAttachment.setName("battleStart.png"); // Set initial filename safely
 
         const firstEmbed = new EmbedBuilder()
             .setDescription("The battle begins!")
@@ -43,19 +41,18 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
 
             if (isBattleOver.result) {
                 await wait(400);
-                const finalImageRaw = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
-                lastImage = Buffer.isBuffer(finalImageRaw) ? finalImageRaw : Buffer.from(finalImageRaw);
+                lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
+                lastImage.setName("battleEnds.png");
                 break;
             }
 
             // Smart rate-limit gate (only update visually every 4 turns)
             if (turns % 4 === 0) {
                 await wait(400);
-                const progressionRaw = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
-                progression = Buffer.isBuffer(progressionRaw) ? progressionRaw : Buffer.from(progressionRaw);
+                progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
                 
                 const turnImgName = `battle_turn_${turns}.png`;
-                const loopAttachment = new AttachmentBuilder(progression, { name: turnImgName });
+                progression.setName(turnImgName); // Dynamically update the attachment filename
 
                 const loopEmbed = new EmbedBuilder()
                     .setTitle(`Battle in Progress...`)
@@ -66,7 +63,7 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
 
                 await updateMessage(battleMessage, { 
                     embeds: [loopEmbed], 
-                    files: [loopAttachment] 
+                    files: [progression] 
                 });
             }
         }
@@ -78,15 +75,13 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         universalSet("characters", winner.user.id, { xp: winner.xp });
         universalSet("characters", loser.user.id, { xp: loser.xp });
 
-        const finalAttachment = new AttachmentBuilder(lastImage, { name: "battleEnds.png" });
-
         const resultEmbed = new EmbedBuilder()
             .setColor("#bcdf1f")
             .setTitle("Battle Result")
             .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
             .setImage("attachment://battleEnds.png");
 
-        await updateMessage(battleMessage, { embeds: [resultEmbed], files: [finalAttachment] });
+        await updateMessage(battleMessage, { embeds: [resultEmbed], files: [lastImage] });
 
         await checkXP(winner.user.id);
         await checkXP(loser.user.id);
