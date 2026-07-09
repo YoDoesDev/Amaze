@@ -125,22 +125,11 @@ function drawTopUI(ctx, hpBarImg, self, opp, maxSelfHP, maxOppHP, canvasWidth, s
     const rightRectX = oppLeftX + 54;
 
     // --- DETERMINE RATIOS AND DISPLAY VALUES DYNAMICALLY ---
-    let selfRatio, oppRatio;
-    let displaySelfHp, displayOppHp;
-
-    if (stage === 3) {
-        // Result phase check
-        selfRatio = self.hp <= 0 ? 0 : 1.0;
-        oppRatio = self.hp <= 0 ? 1.0 : 0;
-        displaySelfHp = self.hp <= 0 ? 0 : safeMaxSelf;
-        displayOppHp = self.hp <= 0 ? safeMaxOpp : 0;
-    } else {
-        // FIX: Removed the static percentages. Now stage 1 and stage 2 use actual, real-time math parameters
-        selfRatio = Math.max(0, Math.min(1, self.hp / safeMaxSelf));
-        oppRatio = Math.max(0, Math.min(1, opp.hp / safeMaxOpp));
-        displaySelfHp = Math.max(0, self.hp);
-        displayOppHp = Math.max(0, opp.hp);
-    }
+    // Combined logic: both final screens and mid-turns use real-time live data parameters now!
+    const selfRatio = Math.max(0, Math.min(1, self.hp / safeMaxSelf));
+    const oppRatio = Math.max(0, Math.min(1, opp.hp / safeMaxOpp));
+    const displaySelfHp = Math.max(0, self.hp);
+    const displayOppHp = Math.max(0, opp.hp);
 
     // --- 1. LEFT PLAYER (SELF) HEALTH BAR ---
     ctx.drawImage(hpBarImg, selfLeftX - 15, topY - 10, 330, 55);
