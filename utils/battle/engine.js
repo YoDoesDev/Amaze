@@ -33,28 +33,37 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         let battleMessage = await sendInitial({ embeds: [firstEmbed], files: [firstImage] });
 
         // Combat Engine Loop
-        while (!isBattleOver.result) {
-            isBattleOver = takeTurn(game.self, game.opp);
-            turns++;
+while (!isBattleOver.result) {
+    isBattleOver = takeTurn(game.self, game.opp);
+    turns++;
 
-            if (isBattleOver.result) {
-                await wait(400);
-                lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
-                break;
-            }
+    if (isBattleOver.result) {
+        await wait(400);
+        // Add a cache-busting property name to the final asset if needed
+        lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
+        break;
+    }
 
-            if (turns % 4 === 0) {
-                await wait(400);
-                progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
+    // Keep your smart rate-limit gate (only update every 4 turns)
+    if (turns % 4 === 0) {
+        await wait(400);
+        progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
 
-                const loopEmbed = new EmbedBuilder()
-                    .setDescription(`Turn ${turns}`)
-                    .setImage("attachment://battle.png")
-                    .setColor("#006eff");
+        // FIX: Force a change in the Embed's construction fields to invalidate Discord's CDN cache
+        const loopEmbed = new EmbedBuilder()
+            .setTitle(`Battle in Progress...`)
+            .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
+            .setImage(`attachment://battle.png?v=${turns}`) // Appending a query param drops the cache frame
+            .setColor("#006eff")
+            .setTimestamp(); // Changing timestamps forces an layout state recalculation
 
-                await updateMessage(battleMessage, { embeds: [loopEmbed], files: [progression] });
-            }
-        }
+        await updateMessage(battleMessage, { 
+            embeds: [loopEmbed], 
+            files: [progression] 
+        });
+    }
+}
+
 
         // Processing Results
         const winner = isBattleOver.winner;
