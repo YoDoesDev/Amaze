@@ -1,102 +1,95 @@
-// FIX: Import AttachmentBuilder alongside EmbedBuilder
-const { EmbedBuilder, AttachmentBuilder } = require("discord.js");
-const { render } = require("./renderer.js");
-const { takeTurn } = require("./actions.js");
-const { universalSet } = require("../database.js");
-const { checkXP } = require("./leveling.js");
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require("discord.js");
+const { universalGet } = require("../../../utils/database.js");
+const { runBattleContext } = require("../../../utils/battle/engine.js");
 
-const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+const games = new Map();
 
-async function runBattleContext({ context, selfUser, oppUser, char1, char2, games, channelId, sendInitial, updateMessage }) {
-    const game = {
-        channel: channelId,
-        self: { user: selfUser, hp: char1.hp, str: char1.str, dma: char1.dma, spd: char1.spd, xp: char1.xp },
-        opp: { user: oppUser, hp: char2.hp, str: char2.str, dma: char2.dma, spd: char2.spd, xp: char2.xp }
-    };
+module.exports = {
+    name: "battle",
+    description: "Battle with another character using prefix command.",
+    cooldown: 10,
+    
+    async execute(message, args) {
+        const mention = args[0];
+        let opponentUser;
 
-    games.set(channelId, game);
-
-    try {
-        const selfMaxHP = char1.hp || 1000;
-        const oppMaxHP = char2.hp || 1000;
-
-        let turns = 0;
-        let isBattleOver = { result: false };
-        let lastImage, progression;
-
-        // Render Start
-        let dynamicName = `battleStart.png`;
-        const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
-        
-        // FIX: Wrap the buffer securely using AttachmentBuilder
-        const firstAttachment = new AttachmentBuilder(firstImage, { name: dynamicName });
-
-        const firstEmbed = new EmbedBuilder()
-            .setDescription("The battle begins!")
-            .setImage(`attachment://${dynamicName}`)
-            .setColor("#006eff");
-
-        let battleMessage = await sendInitial({ embeds: [firstEmbed], files: [firstAttachment] });
-
-        // Combat Engine Loop
-        while (!isBattleOver.result) {
-            isBattleOver = takeTurn(game.self, game.opp);
-            turns++;
-
-            if (isBattleOver.result) {
-                await wait(400);
-                lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
-                dynamicName = `battleEnds.png`;
-                break;
-            }
-
-            // Keep your smart rate-limit gate (only update every 4 turns)
-            if (turns % 4 === 0) {
-                await wait(400);
-                progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
-                dynamicName = `battle_${turns}.png`;
-                
-                // FIX: Wrap inside AttachmentBuilder
-                const loopAttachment = new AttachmentBuilder(progression, { name: dynamicName });
-
-                const loopEmbed = new EmbedBuilder()
-                    .setTitle(`Battle in Progress...`)
-                    .setDescription(`⚔️ **Turn ${turns}**\nBoth fighters are trading heavy blows!`)
-                    .setImage(`attachment://${dynamicName}`)
-                    .setColor("#006eff")
-                    .setTimestamp();
-
-                await updateMessage(battleMessage, { 
-                    embeds: [loopEmbed], 
-                    files: [loopAttachment] 
-                });
-            }
+        if (mention) {
+            // FIX: Corrected regex token to safely grab numeric user IDs
+            const matches = mention.match(/^<@!?(\d+)>/);
+            const id = matches ? matches[1] : mention;
+            opponentUser = await message.client.users.fetch(id).catch(() => null);
         }
 
-        // Processing Results
-        const winner = isBattleOver.winner;
-        const loser = isBattleOver.loser;
+        if (!opponentUser) {
+            return message.reply("Please mention a valid user or provide their ID to battle. (e.g. `!battle @username`)");
+        }
 
-        universalSet("characters", winner.user.id, { xp: winner.xp });
-        universalSet("characters", loser.user.id, { xp: loser.xp });
+        const sessionKey = message.channelId || message.author.id;
 
-        // FIX: Wrap the final output frame inside AttachmentBuilder
-        const finalAttachment = new AttachmentBuilder(lastImage, { name: dynamicName });
+        // Validation Rules
+        if (games.has(sessionKey)) return message.reply("A battle is already in progress here.");
+        if (message.author.id === opponentUser.id) return message.reply("You can't battle yourself.");
 
-        const resultEmbed = new EmbedBuilder()
-            .setColor("#bcdf1f")
-            .setTitle("Battle Result")
-            .setDescription(`<@${winner.user.id}> has defeated <@${loser.user.id}>!`)
-            .setImage(`attachment://${dynamicName}`);
+        const char = universalGet("characters", message.author.id);
+        const char2 = universalGet("characters", opponentUser.id);
 
-        await updateMessage(battleMessage, { embeds: [resultEmbed], files: [finalAttachment] });
+        if (!char) return message.reply("You don't have a character setup yet.");
+        if (!char2) return message.reply("Your opponent doesn't have a character setup.");
 
-        await checkXP(winner.user.id);
-        await checkXP(loser.user.id);
+        // Build Challenge Phase UI
+        const ask = new EmbedBuilder()
+            .setTitle("Battle Challenge")
+            .setDescription(`${message.author} has challenged ${opponentUser} to a battle!`)
+            .setColor("#ff4466")
+            .setFooter({ text: "You have 30 seconds to accept or decline." });
+            
+        const row = new ActionRowBuilder().addComponents(
+            new ButtonBuilder().setCustomId("accept").setLabel("Accept").setStyle(ButtonStyle.Success),
+            new ButtonBuilder().setCustomId("decline").setLabel("Decline").setStyle(ButtonStyle.Danger)
+        );
 
-    } finally {
-        games.delete(channelId);
+        const challengeMessage = await message.reply({ embeds: [ask], components: [row] });
+
+        // Channel-level component collector works perfectly inside DMs too
+        const collector = message.channel.createMessageComponentCollector({
+            filter: i => i.user.id === opponentUser.id && i.message.id === challengeMessage.id,
+            componentType: ComponentType.Button,
+            time: 30000,
+            max: 1 
+        });
+
+        const getSelection = () => new Promise((resolve, reject) => {
+            collector.on('collect', async (i) => {
+                await i.update({ components: [] }).catch(() => null);
+                resolve(i.customId);
+            });
+
+            collector.on('end', (collected) => {
+                if (collected.size === 0) {
+                    reject(new Error('timeout'));
+                }
+            });
+        });
+
+        try {
+            const customId = await getSelection();
+            if (customId !== "accept") {
+                return challengeMessage.edit({ content: "Challenge declined!", embeds: [], components: [] });
+            }
+        } catch (err) {
+            return challengeMessage.edit({ content: "Timed out!", embeds: [], components: [] });
+        }
+
+        // Execution wrappers pass message instances safely whether it's a DM or a server channel
+        await runBattleContext({
+            selfUser: message.author,
+            oppUser: opponentUser,
+            char1: char,
+            char2: char2,
+            games: games,
+            channelId: sessionKey,
+            sendInitial: (options) => message.channel.send(options),
+            updateMessage: (msg, options) => msg.edit(options)
+        });
     }
-}
-
-module.exports = { runBattleContext };
+};
