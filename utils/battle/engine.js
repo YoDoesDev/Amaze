@@ -24,7 +24,9 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         let lastImage, progression;
 
         // Render Start Frame
-        const firstImage = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
+        const firstImageRaw = await render(game.self, game.opp, 1, selfMaxHP, oppMaxHP);
+        // FIX: Ensure we use Buffer.from() to cast the stream explicitly to prevent engine resolution failure
+        const firstImage = Buffer.isBuffer(firstImageRaw) ? firstImageRaw : Buffer.from(firstImageRaw);
         const firstAttachment = new AttachmentBuilder(firstImage, { name: "battleStart.png" });
 
         const firstEmbed = new EmbedBuilder()
@@ -41,14 +43,16 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
 
             if (isBattleOver.result) {
                 await wait(400);
-                lastImage = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
+                const finalImageRaw = await render(game.self, game.opp, 3, selfMaxHP, oppMaxHP);
+                lastImage = Buffer.isBuffer(finalImageRaw) ? finalImageRaw : Buffer.from(finalImageRaw);
                 break;
             }
 
             // Smart rate-limit gate (only update visually every 4 turns)
             if (turns % 4 === 0) {
                 await wait(400);
-                progression = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
+                const progressionRaw = await render(game.self, game.opp, 2, selfMaxHP, oppMaxHP);
+                progression = Buffer.isBuffer(progressionRaw) ? progressionRaw : Buffer.from(progressionRaw);
                 
                 const turnImgName = `battle_turn_${turns}.png`;
                 const loopAttachment = new AttachmentBuilder(progression, { name: turnImgName });
@@ -74,7 +78,6 @@ async function runBattleContext({ context, selfUser, oppUser, char1, char2, game
         universalSet("characters", winner.user.id, { xp: winner.xp });
         universalSet("characters", loser.user.id, { xp: loser.xp });
 
-        // FIX: Explicitly insulate file metadata resolution variables inside isolated objects
         const finalAttachment = new AttachmentBuilder(lastImage, { name: "battleEnds.png" });
 
         const resultEmbed = new EmbedBuilder()
