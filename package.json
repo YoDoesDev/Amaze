@@ -10,6 +10,5 @@
     "express": "^5.2.1",
     "topgg-autoposter": "^2.0.2",
     "@napi-rs/canvas": "^1.2.0"
-
   }
 }
