@@ -2,7 +2,10 @@ const { AutoPoster } = require('topgg-autoposter');
 
 module.exports = {
   setupIntegrations: (client, app, db) => {
-    
+    const port = process.env.PORT || 2186;
+    app.get('/', (req, res) => res.status(200).send('OK'));
+    app.listen(port, '0.0.0.0', () => console.log(`>>> [SERVER] HTTP listener live on port ${port}`));
+
     if (process.env.TOPGG_TOKEN) {
       // 1. Top.gg Autoposter
       const ap = AutoPoster(process.env.TOPGG_TOKEN, client);
@@ -42,8 +45,7 @@ module.exports = {
         }
       });
 
-      // 3. Webhook Listener
-      app.listen(2186, () => console.log(">>> [WEBHOOK] Listener live on port 2186"));
+      // 3. Webhook route /votereward mounted on shared Express server
     }
   }
 };
