@@ -33,8 +33,14 @@ const initDb = () => {
         bucks INTEGER DEFAULT 0,
         dTimestamp INTEGER DEFAULT 0,
         wTimestamp INTEGER DEFAULT 0,
-        mTimestamp INTEGER DEFAULT 0
+        mTimestamp INTEGER DEFAULT 0,
+        last_taxed_at INTEGER DEFAULT 0
     )`).run();
+
+    const amashCols = db.prepare(`PRAGMA table_info(amash)`).all().map(c => c.name);
+    if (!amashCols.includes('last_taxed_at')) {
+        db.prepare(`ALTER TABLE amash ADD COLUMN last_taxed_at INTEGER DEFAULT 0`).run();
+    }
     db.prepare(`CREATE TABLE IF NOT EXISTS investments (
          investor TEXT, 
          invested TEXT, 
@@ -73,7 +79,7 @@ const initDb = () => {
 const TABLE_SCHEMAS = {
     pings: { keys: ['userid'], defaults: { count: 0 } },
     reputation: { keys: ['userid'], defaults: { points: 0 }, cache: reputation},
-    amash: { keys: ['userid'], defaults: { bucks: 0, dTimestamp: 0, wTimestamp: 0, mTimestamp: 0 }, cache: amash},
+    amash: { keys: ['userid'], defaults: { bucks: 0, dTimestamp: 0, wTimestamp: 0, mTimestamp: 0, last_taxed_at: 0 }, cache: amash},
     inventory: { keys: ['userid'], defaults: { pr_tp: 0, ddbl_tp: 0, dblv_tp: 0, stocklic: 0, pstone: 0 }, cache: inventory},
     guild_settings: { keys: ['guildid'], defaults: { prefix: '!' } },
     vouch_history: { keys: ['voucher_id', 'receiver_id'], cache: vouch_history}, 
