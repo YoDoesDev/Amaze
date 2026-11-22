@@ -15,6 +15,13 @@ const db = new Database(path.join(__dirname, '..', 'amaze.sqlite'), {});
 
 console.log('>>> [DATABASE] Connected to amaze.sqlite (Better-SQLite3).');
 
+function ensureColumn(tableName, columnName, columnDef) {
+    const columns = db.prepare(`PRAGMA table_info(${tableName})`).all().map(c => c.name);
+    if (!columns.includes(columnName)) {
+        db.prepare(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`).run();
+    }
+}
+
 const initDb = () => {
     db.pragma('journal_mode = DELETE');
     db.pragma('synchronous = OFF');
@@ -34,13 +41,11 @@ const initDb = () => {
         dTimestamp INTEGER DEFAULT 0,
         wTimestamp INTEGER DEFAULT 0,
         mTimestamp INTEGER DEFAULT 0,
+        dStreak INTEGER DEFAULT 0,
+        wStreak INTEGER DEFAULT 0,
+        mStreak INTEGER DEFAULT 0,
         last_taxed_at INTEGER DEFAULT 0
     )`).run();
-
-    const amashCols = db.prepare(`PRAGMA table_info(amash)`).all().map(c => c.name);
-    if (!amashCols.includes('last_taxed_at')) {
-        db.prepare(`ALTER TABLE amash ADD COLUMN last_taxed_at INTEGER DEFAULT 0`).run();
-    }
     db.prepare(`CREATE TABLE IF NOT EXISTS investments (
          investor TEXT, 
          invested TEXT, 
@@ -66,12 +71,19 @@ const initDb = () => {
     characters (
         userid TEXT PRIMARY KEY, 
         type INTEGER DEFAULT 0,
+        hp INTEGER DEFAULT 100,
         spd INTEGER DEFAULT 10,
         str INTEGER DEFAULT 20,
         dma INTEGER DEFAULT 5,
         xp INTEGER DEFAULT 0,
         lvl INTEGER DEFAULT 0
     )`).run();
+
+    ensureColumn('amash', 'dStreak', 'INTEGER DEFAULT 0');
+    ensureColumn('amash', 'wStreak', 'INTEGER DEFAULT 0');
+    ensureColumn('amash', 'mStreak', 'INTEGER DEFAULT 0');
+    ensureColumn('amash', 'last_taxed_at', 'INTEGER DEFAULT 0');
+    ensureColumn('characters', 'hp', 'INTEGER DEFAULT 100');
     
     console.log(">>> [DATABASE] All tables verified and ready.");
 };
@@ -79,7 +91,20 @@ const initDb = () => {
 const TABLE_SCHEMAS = {
     pings: { keys: ['userid'], defaults: { count: 0 } },
     reputation: { keys: ['userid'], defaults: { points: 0 }, cache: reputation},
-    amash: { keys: ['userid'], defaults: { bucks: 0, dTimestamp: 0, wTimestamp: 0, mTimestamp: 0, last_taxed_at: 0 }, cache: amash},
+    amash: {
+        keys: ['userid'],
+        defaults: {
+            bucks: 0,
+            dTimestamp: 0,
+            wTimestamp: 0,
+            mTimestamp: 0,
+            dStreak: 0,
+            wStreak: 0,
+            mStreak: 0,
+            last_taxed_at: 0
+        },
+        cache: amash
+    },
     inventory: { keys: ['userid'], defaults: { pr_tp: 0, ddbl_tp: 0, dblv_tp: 0, stocklic: 0, pstone: 0 }, cache: inventory},
     guild_settings: { keys: ['guildid'], defaults: { prefix: '!' } },
     vouch_history: { keys: ['voucher_id', 'receiver_id'], cache: vouch_history}, 
@@ -88,6 +113,7 @@ const TABLE_SCHEMAS = {
         keys: ['userid'], 
         defaults: {
             type: 0,
+            hp: 100,
             spd: 10,
             str: 20,
             dma: 5,
