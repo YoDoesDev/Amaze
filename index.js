@@ -15,6 +15,7 @@ require('dotenv').config();
 
 // --- DATABASE & MANAGERS ---
 const { initDb, db } = require('./utils/database.js');
+initDb();
 
 // --- 3. CUSTOM UTILITIES ---
 const { loadCommands, loadSlashCommands } = require('./utils/handlers/cmdLoader.js');
@@ -66,7 +67,6 @@ client.slashCommands = new Collection();
 client.aliases = new Map();
 
 // Fire up the systems
-initDb();
 loadCommands(client);
 loadSlashCommands(client);
 
