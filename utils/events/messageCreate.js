@@ -4,8 +4,8 @@ const { parseCommand } = require("../handlers/cmdParse.js");
 const { executeCommand } = require("../handlers/execute.js");
 const { handleCooldown } = require('../handlers/cooldowns.js');
 const { autoMsg } = require('../handlers/autoMsg.js');
-const { getPrefix } = require('../prefixManager.js');
 const { db } = require("../database.js")
+const { getPrefix } = require('../prefixManager.js');
 
 
 const execPrefix = async (message, client) => {
